@@ -15,7 +15,7 @@
             {{ $user?->role?->label() ?? 'Setor' }}
         </x-badge>
 
-        <a href="{{ route('profile') }}" class="flex h-11 items-center gap-2 rounded-[10px] border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+        <a href="{{ route('profile') }}" wire:navigate class="flex h-11 items-center gap-2 rounded-[10px] border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
             <x-icon name="user" class="h-5 w-5 text-slate-500" />
             Perfil
         </a>

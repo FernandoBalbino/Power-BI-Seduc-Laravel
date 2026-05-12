@@ -1,0 +1,46 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Logo SEDUC BI</title>
+  <desc id="desc">Ícone azul em formato de livro aberto.</desc>
+  <defs>
+    <linearGradient id="leftGradient" x1="88" y1="120" x2="254" y2="392" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1976FF"/>
+      <stop offset="1" stop-color="#0B5ED7"/>
+    </linearGradient>
+    <linearGradient id="rightGradient" x1="424" y1="120" x2="258" y2="392" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2F80FF"/>
+      <stop offset="1" stop-color="#0D6EFD"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Left page -->
+  <path
+    d="M96 140C96 128.954 104.954 120 116 120H190C219.5 120 240.5 131.5 256 147V392C239.5 374.5 217.5 364 190 364H116C104.954 364 96 355.046 96 344V140Z"
+    fill="url(#leftGradient)"/>
+
+  <!-- Right page -->
+  <path
+    d="M416 140C416 128.954 407.046 120 396 120H322C292.5 120 271.5 131.5 256 147V392C272.5 374.5 294.5 364 322 364H396C407.046 364 416 355.046 416 344V140Z"
+    fill="url(#rightGradient)"/>
+
+  <!-- Center fold -->
+  <path
+    d="M256 147V392"
+    stroke="#0A58CA"
+    stroke-width="8"
+    stroke-linecap="round"
+    opacity="0.22"/>
+
+  <!-- Soft inner highlights -->
+  <path
+    d="M128 156H188C214 156 235 166 250 181"
+    stroke="white"
+    stroke-width="10"
+    stroke-linecap="round"
+    opacity="0.12"/>
+  <path
+    d="M384 156H324C298 156 277 166 262 181"
+    stroke="white"
+    stroke-width="10"
+    stroke-linecap="round"
+    opacity="0.12"/>
+</svg>

@@ -8,11 +8,8 @@
 @endphp
 
 <aside class="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-white px-3.5 py-[18px] shadow-[1px_0_0_rgba(226,232,240,0.9)]">
-    <a href="{{ route('dashboard') }}" class="flex h-11 items-center gap-3 px-2 text-slate-950">
-        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-seduc-primary-soft text-seduc-primary">
-            <x-icon name="book-open" class="h-6 w-6" />
-        </span>
-        <span class="text-xl font-extrabold tracking-normal">SEDUC BI</span>
+    <a href="{{ route('dashboard') }}" wire:navigate class="flex h-11 items-center gap-3 px-2 text-slate-950">
+        <x-logo size="sm" />
     </a>
 
     <nav class="mt-8 flex flex-1 flex-col gap-2">
@@ -24,6 +21,7 @@
 
             <a
                 href="{{ $href }}"
+                wire:navigate
                 class="{{ $isActive ? 'bg-seduc-primary text-white shadow-seduc-button' : 'text-slate-700 hover:bg-slate-100' }} flex h-12 items-center gap-3 rounded-[10px] px-3.5 text-sm font-semibold transition"
             >
                 <x-icon :name="$item['icon']" class="h-5 w-5 shrink-0" />

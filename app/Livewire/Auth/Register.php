@@ -21,7 +21,7 @@ class Register extends Component
     public function mount(): void
     {
         if (Auth::check()) {
-            $this->redirectRoute('dashboard');
+            $this->redirectRoute('dashboard', navigate: true);
         }
     }
 
@@ -55,7 +55,7 @@ class Register extends Component
 
         session()->regenerate();
 
-        $this->redirectRoute('dashboard');
+        $this->redirectRoute('dashboard', navigate: true);
     }
 
     public function render()

@@ -1,8 +1,6 @@
 <div class="mx-auto max-w-md">
     <div class="mb-8 text-center">
-        <div class="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-seduc-primary-soft text-seduc-primary">
-            <x-icon name="book-open" class="h-7 w-7" />
-        </div>
+        <x-logo :with-text="false" size="md" class="mb-5 justify-center" />
         <h1 class="text-[32px] font-bold leading-10 text-slate-950">Crie sua conta</h1>
         <p class="mt-3 text-sm leading-6 text-slate-500">Cadastre-se para acessar os dashboards do seu setor.</p>
     </div>
@@ -55,6 +53,6 @@
 
     <div class="mt-8 border-t border-slate-200 pt-7 text-center text-sm text-slate-600">
         Já tem conta?
-        <a href="{{ route('login') }}" class="font-semibold text-seduc-primary hover:text-seduc-primary-hover">Entrar</a>
+        <a href="{{ route('login') }}" wire:navigate class="font-semibold text-seduc-primary hover:text-seduc-primary-hover">Entrar</a>
     </div>
 </div>
