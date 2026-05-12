@@ -1,11 +1,10 @@
-<div class="mx-auto w-full max-w-md">
-    <div class="mb-7 text-center">
-        <x-logo :with-text="false" size="md" class="mb-4 justify-center" />
-        <h1 class="text-[32px] font-bold leading-10 text-slate-950">Entrar na sua conta</h1>
-        <p class="mt-3 text-sm leading-6 text-slate-500">Acesse seus dashboards e acompanhe os dados do seu setor.</p>
+<div class="mx-auto w-full max-w-[380px]">
+    <div class="mb-9 text-center">
+        <h1 class="text-[30px] font-bold leading-10 text-slate-950">Bem-vindo de volta</h1>
+        <p class="mt-3 text-sm leading-6 text-slate-400">Informe seu e-mail e senha para acessar sua conta.</p>
     </div>
 
-    <form wire:submit="login" class="space-y-4">
+    <form wire:submit="login" class="space-y-5">
         <x-input
             label="E-mail"
             name="email"
@@ -34,12 +33,12 @@
             <span class="text-sm font-semibold text-seduc-primary">Esqueci minha senha</span>
         </div>
 
-        <x-button type="submit" class="w-full">
+        <x-button type="submit" class="w-full bg-[#302EF4] hover:bg-[#2725d8]">
             Entrar
         </x-button>
     </form>
 
-    <div class="mt-7 border-t border-slate-200 pt-6 text-center text-sm text-slate-600">
+    <div class="mt-8 text-center text-sm text-slate-500">
         Ainda não tem conta?
         <a href="{{ route('register') }}" wire:navigate class="font-semibold text-seduc-primary hover:text-seduc-primary-hover">Cadastre-se</a>
     </div>

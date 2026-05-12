@@ -1,11 +1,10 @@
-<div class="mx-auto w-full max-w-md">
-    <div class="mb-5 text-center">
-        <x-logo :with-text="false" size="sm" class="mb-3 justify-center" />
-        <h1 class="text-[28px] font-bold leading-9 text-slate-950">Crie sua conta</h1>
-        <p class="mt-2 text-sm leading-6 text-slate-500">Cadastre-se para acessar os dashboards do seu setor.</p>
+<div class="mx-auto w-full max-w-[380px]">
+    <div class="mb-6 text-center">
+        <h1 class="text-[30px] font-bold leading-10 text-slate-950">Crie sua conta</h1>
+        <p class="mt-3 text-sm leading-6 text-slate-400">Cadastre-se para acessar os dashboards do seu setor.</p>
     </div>
 
-    <form wire:submit="register" class="space-y-3">
+    <form wire:submit="register" class="space-y-4">
         <x-input
             label="Nome completo"
             name="name"
@@ -46,12 +45,12 @@
             :error="$errors->first('passwordConfirmation')"
         />
 
-        <x-button type="submit" class="w-full">
+        <x-button type="submit" class="w-full bg-[#302EF4] hover:bg-[#2725d8]">
             Criar conta
         </x-button>
     </form>
 
-    <div class="mt-5 border-t border-slate-200 pt-5 text-center text-sm text-slate-600">
+    <div class="mt-6 text-center text-sm text-slate-500">
         Já tem conta?
         <a href="{{ route('login') }}" wire:navigate class="font-semibold text-seduc-primary hover:text-seduc-primary-hover">Entrar</a>
     </div>

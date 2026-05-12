@@ -12,56 +12,77 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         @livewireStyles
     </head>
-    <body class="h-screen overflow-hidden bg-seduc-page text-seduc-body">
-        <main class="h-screen px-6 py-6">
-            <div class="mx-auto grid h-full max-w-7xl grid-cols-1 items-center gap-8 lg:grid-cols-[500px_1fr]">
-                <section class="flex max-h-[calc(100vh-3rem)] min-h-0 items-center rounded-[22px] border border-slate-200 bg-white p-7 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
-                    {{ $slot }}
-                </section>
+    <body class="h-screen overflow-hidden bg-white text-seduc-body">
+        <main class="h-screen p-4">
+            <div class="grid h-full grid-cols-1 gap-4 lg:grid-cols-[49%_51%]">
+                <section class="relative flex h-full min-h-0 flex-col bg-white px-8 py-7">
+                    <a href="{{ route('login') }}" wire:navigate class="absolute left-8 top-7">
+                        <x-logo size="sm" />
+                    </a>
 
-                <section class="hidden h-full min-h-0 overflow-hidden rounded-[22px] border border-blue-100 bg-seduc-soft-blue p-8 shadow-seduc-card lg:flex lg:flex-col lg:justify-center">
-                    <div class="mb-5 inline-flex w-fit items-center gap-2 rounded-xl bg-seduc-primary-soft px-4 py-3 text-sm font-bold text-seduc-primary">
-                        <x-icon name="chart-bar" class="h-5 w-5" />
-                        Bem-vindo ao SEDUC BI
+                    <div class="flex flex-1 items-center justify-center">
+                        {{ $slot }}
                     </div>
 
-                    <h1 class="max-w-3xl text-[34px] font-extrabold leading-[42px] text-slate-950">
-                        Visualize dados, acompanhe obras e tome
-                        <span class="text-seduc-primary">decisões com clareza</span>
-                    </h1>
+                    <footer class="flex items-center justify-between text-xs text-slate-400">
+                        <span>Copyright © {{ now()->year }} SEDUC BI</span>
+                        <span>Política de privacidade</span>
+                    </footer>
+                </section>
 
-                    <p class="mt-4 max-w-2xl text-base leading-7 text-slate-600">
-                        Dashboards interativos, filtros inteligentes, gráficos intuitivos e atualizações em tempo real para uma gestão mais eficiente e transparente.
-                    </p>
+                <section class="relative hidden h-full min-h-0 overflow-hidden rounded-[22px] bg-[#302EF4] px-14 py-12 text-white shadow-[0_24px_60px_rgba(13,20,120,0.24)] lg:flex lg:flex-col lg:justify-center">
+                    <div class="pointer-events-none absolute inset-0 opacity-35">
+                        <div class="absolute -left-28 top-10 h-80 w-80 rounded-full bg-white/10"></div>
+                        <div class="absolute right-8 top-0 h-48 w-48 rounded-bl-[90px] bg-white/10"></div>
+                        <div class="absolute bottom-8 left-20 h-36 w-56 rounded-[28px] bg-white/10"></div>
+                        <div class="absolute bottom-28 right-24 h-32 w-44 rounded-[28px] border border-dashed border-white/30"></div>
+                        <div class="absolute left-10 top-1/2 h-48 w-32 rounded-r-[80px] bg-white/10"></div>
+                    </div>
 
-                    <x-auth-dashboard-preview class="mt-6" />
+                    <div class="relative z-10 mx-auto w-full max-w-[620px]">
+                        <h1 class="max-w-xl text-[34px] font-semibold leading-[44px] text-white">
+                            Visualize dados, acompanhe obras e tome decisões com clareza.
+                        </h1>
 
-                    <div class="mt-6 grid grid-cols-3 gap-5">
-                        <div class="flex items-start gap-3">
-                            <span class="flex h-10 w-10 items-center justify-center rounded-full bg-white text-seduc-primary shadow-seduc-card">
-                                <x-icon name="pie-chart" class="h-5 w-5" />
-                            </span>
-                            <div>
-                                <p class="text-sm font-bold text-slate-900">Dashboards dinâmicos</p>
-                                <p class="mt-1 text-xs leading-5 text-slate-600">Visualize KPIs e indicadores em painéis interativos.</p>
+                        <p class="mt-4 max-w-lg text-sm leading-6 text-white/75">
+                            Acesse seus dashboards, acompanhe indicadores do setor e mantenha as informações sempre atualizadas.
+                        </p>
+
+                        <div class="relative mt-8">
+                            <div class="absolute -inset-5 rounded-[28px] bg-white/10 blur-md"></div>
+                            <div class="relative rounded-xl border border-white/25 bg-white p-2 shadow-[0_28px_70px_rgba(0,0,0,0.22)]">
+                                <img
+                                    src="{{ asset('images/auth-dashboard.jpg') }}"
+                                    alt="Dashboard de indicadores"
+                                    class="h-[300px] w-full rounded-lg object-cover object-center"
+                                >
+                            </div>
+
+                            <div class="absolute -right-10 top-16 w-48 rounded-xl border border-white/20 bg-white p-4 text-slate-950 shadow-[0_18px_50px_rgba(15,23,42,0.20)]">
+                                <p class="text-[11px] font-semibold text-slate-500">Execução média</p>
+                                <div class="mt-3 flex items-center justify-center">
+                                    <div class="flex h-24 w-24 items-center justify-center rounded-full bg-[conic-gradient(#302EF4_0_72%,#DAD7FF_72%_100%)]">
+                                        <div class="flex h-16 w-16 flex-col items-center justify-center rounded-full bg-white">
+                                            <span class="text-lg font-bold text-slate-950">72%</span>
+                                            <span class="text-[10px] text-slate-500">Obras</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="flex items-start gap-3">
-                            <span class="flex h-10 w-10 items-center justify-center rounded-full bg-white text-green-600 shadow-seduc-card">
-                                <x-icon name="file-spreadsheet" class="h-5 w-5" />
-                            </span>
-                            <div>
-                                <p class="text-sm font-bold text-slate-900">Importação de planilhas</p>
-                                <p class="mt-1 text-xs leading-5 text-slate-600">Importe dados com facilidade e mantenha tudo atualizado.</p>
+
+                        <div class="mt-8 grid grid-cols-3 gap-4 text-sm">
+                            <div class="rounded-2xl bg-white/10 p-4 backdrop-blur">
+                                <p class="font-semibold text-white">Dashboards</p>
+                                <p class="mt-1 text-xs leading-5 text-white/70">KPIs e indicadores por setor.</p>
                             </div>
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <span class="flex h-10 w-10 items-center justify-center rounded-full bg-white text-violet-600 shadow-seduc-card">
-                                <x-icon name="users" class="h-5 w-5" />
-                            </span>
-                            <div>
-                                <p class="text-sm font-bold text-slate-900">Análises por setor</p>
-                                <p class="mt-1 text-xs leading-5 text-slate-600">Acompanhe informações estratégicas do seu setor.</p>
+                            <div class="rounded-2xl bg-white/10 p-4 backdrop-blur">
+                                <p class="font-semibold text-white">Planilhas</p>
+                                <p class="mt-1 text-xs leading-5 text-white/70">Importação simples e segura.</p>
+                            </div>
+                            <div class="rounded-2xl bg-white/10 p-4 backdrop-blur">
+                                <p class="font-semibold text-white">Análises</p>
+                                <p class="mt-1 text-xs leading-5 text-white/70">Decisões claras e rápidas.</p>
                             </div>
                         </div>
                     </div>
