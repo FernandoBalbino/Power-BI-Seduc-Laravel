@@ -265,6 +265,64 @@ class ExampleTest extends TestCase
         $this->assertSame('Empresa A', $component->get('previewRows')[0]['values'][0]);
     }
 
+    public function test_import_wizard_uses_data_end_cell_to_ignore_summary_rows(): void
+    {
+        Storage::fake('local');
+
+        $sector = Sector::factory()->create();
+        $user = User::factory()->create(['sector_id' => $sector->id]);
+        $dashboard = Dashboard::factory()->create([
+            'sector_id' => $sector->id,
+            'user_id' => $user->id,
+        ]);
+
+        $this->actingAs($user);
+
+        $component = Livewire::test(ImportWizard::class, ['dashboard' => $dashboard])
+            ->set('dataEndCell', 'A3')
+            ->set('file', UploadedFile::fake()->createWithContent(
+                'totais.csv',
+                "Cidade,Valor\nMaceió,100\nPenedo,200\nTotal,300\n"
+            ))
+            ->call('uploadFile')
+            ->assertSet('dataEndCell', 'A3')
+            ->assertSee('Maceió')
+            ->assertDontSee('Total');
+
+        $this->assertCount(2, $component->get('previewRows'));
+
+        $this->assertDatabaseHas('dashboard_imports', [
+            'dashboard_id' => $dashboard->id,
+            'original_filename' => 'totais.csv',
+            'data_end_cell' => 'A3',
+            'status' => DashboardImportStatus::Mapped->value,
+        ]);
+    }
+
+    public function test_import_wizard_requires_end_cell_after_header_cell(): void
+    {
+        Storage::fake('local');
+
+        $sector = Sector::factory()->create();
+        $user = User::factory()->create(['sector_id' => $sector->id]);
+        $dashboard = Dashboard::factory()->create([
+            'sector_id' => $sector->id,
+            'user_id' => $user->id,
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(ImportWizard::class, ['dashboard' => $dashboard])
+            ->set('headerStartCell', 'A2')
+            ->set('dataEndCell', 'A1')
+            ->set('file', UploadedFile::fake()->createWithContent(
+                'invalido.csv',
+                "\nCidade,Valor\nMaceió,100\n"
+            ))
+            ->call('uploadFile')
+            ->assertHasErrors(['dataEndCell']);
+    }
+
     public function test_spreadsheet_reader_reads_xlsx_sheets_columns_and_preview(): void
     {
         $path = storage_path('framework/testing/import-wizard-sample.xlsx');
@@ -326,6 +384,7 @@ class ExampleTest extends TestCase
                 ['', '', '', ''],
                 ['', 'EMPRESA', 'PROCESSO', 'VALOR'],
                 ['', 'Empresa A', 'E:01800.000001/2026', 'R$ 203.534,80'],
+                ['', 'Total', '', 'R$ 203.534,80'],
             ]);
 
         (new Xlsx($spreadsheet))->save($path);
@@ -333,11 +392,12 @@ class ExampleTest extends TestCase
 
         try {
             $preview = app(SpreadsheetReaderService::class)
-                ->preview($path, 'Processos', 2, 10, 1);
+                ->preview($path, 'Processos', 2, 10, 1, 3);
 
             $this->assertSame('EMPRESA', $preview['columns'][0]['name']);
             $this->assertSame('B', $preview['columns'][0]['letter']);
             $this->assertSame('Empresa A', $preview['rows'][0]['values'][0]);
+            $this->assertCount(1, $preview['rows']);
         } finally {
             if (is_file($path)) {
                 unlink($path);

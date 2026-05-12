@@ -37,6 +37,10 @@ class ImportWizard extends Component
 
     public int $headerStartColumnIndex = 0;
 
+    public ?string $dataEndCell = null;
+
+    public ?int $dataEndRow = null;
+
     public array $sheets = [];
 
     public array $possibleHeaderRows = [];
@@ -64,9 +68,11 @@ class ImportWizard extends Component
     {
         $this->validateUpload();
         $this->syncHeaderStartFromCell();
+        $this->syncDataEndFromCell();
 
         $this->resetImportState();
         $this->syncHeaderStartFromCell();
+        $this->syncDataEndFromCell();
 
         $extension = Str::lower($this->file->getClientOriginalExtension());
         $originalFilename = $this->file->getClientOriginalName();
@@ -78,6 +84,8 @@ class ImportWizard extends Component
             'dashboard_id' => $this->dashboard->id,
             'original_filename' => $originalFilename,
             'file_path' => $filePath,
+            'header_start_cell' => $this->headerStartCell,
+            'data_end_cell' => $this->dataEndCell,
             'status' => DashboardImportStatus::Uploaded,
         ]);
 
@@ -115,13 +123,15 @@ class ImportWizard extends Component
 
         $reader ??= app(SpreadsheetReaderService::class);
         $this->syncHeaderStartFromCell();
+        $this->syncDataEndFromCell();
 
         $analysis = $reader->preview(
             Storage::disk('local')->path($import->file_path),
             $this->selectedSheet,
             $this->headerRow,
             (int) config('seduc-bi.imports.preview_rows', 20),
-            $this->headerStartColumnIndex
+            $this->headerStartColumnIndex,
+            $this->dataEndRow
         );
 
         $this->selectedSheet = $analysis['sheet_name'];
@@ -136,6 +146,8 @@ class ImportWizard extends Component
 
         $import->update([
             'sheet_name' => $this->selectedSheet,
+            'header_start_cell' => $this->headerStartCell,
+            'data_end_cell' => $this->dataEndCell,
             'status' => DashboardImportStatus::Mapped,
         ]);
 
@@ -182,6 +194,12 @@ class ImportWizard extends Component
                 'max:8',
                 'regex:/^[A-Za-z]{1,3}[1-9][0-9]{0,4}$/',
             ],
+            'dataEndCell' => [
+                'nullable',
+                'string',
+                'max:8',
+                'regex:/^[A-Za-z]{1,3}[1-9][0-9]{0,4}$/',
+            ],
             'file' => [
                 'required',
                 'file',
@@ -197,6 +215,7 @@ class ImportWizard extends Component
         ], [
             'headerStartCell.required' => 'Informe onde começam os títulos da planilha.',
             'headerStartCell.regex' => 'Informe uma célula válida, como A1 ou A2.',
+            'dataEndCell.regex' => 'Informe uma célula válida, como A18, ou deixe em branco.',
             'file.required' => 'Selecione uma planilha para importar.',
             'file.file' => 'Selecione um arquivo válido.',
             'file.max' => 'A planilha deve ter no máximo '.$this->maxUploadMb.' MB.',
@@ -252,5 +271,34 @@ class ImportWizard extends Component
         $this->headerRow = (int) $row;
         $this->headerStartColumnIndex = Coordinate::columnIndexFromString($column) - 1;
         $this->headerStartCell = $column.$this->headerRow;
+    }
+
+    private function syncDataEndFromCell(): void
+    {
+        $cell = Str::upper(trim((string) $this->dataEndCell));
+
+        if ($cell === '') {
+            $this->dataEndCell = null;
+            $this->dataEndRow = null;
+
+            return;
+        }
+
+        if (! preg_match('/^[A-Z]{1,3}[1-9][0-9]{0,4}$/', $cell)) {
+            throw ValidationException::withMessages([
+                'dataEndCell' => 'Informe uma célula válida, como A18, ou deixe em branco.',
+            ]);
+        }
+
+        [$column, $row] = Coordinate::coordinateFromString($cell);
+
+        $this->dataEndRow = (int) $row;
+        $this->dataEndCell = $column.$this->dataEndRow;
+
+        if ($this->dataEndRow <= $this->headerRow) {
+            throw ValidationException::withMessages([
+                'dataEndCell' => 'A linha final precisa ficar depois da linha dos títulos.',
+            ]);
+        }
     }
 }

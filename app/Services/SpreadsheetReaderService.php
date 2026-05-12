@@ -37,7 +37,8 @@ class SpreadsheetReaderService
         ?string $sheetName = null,
         int $headerRow = 1,
         int $previewRows = 20,
-        int $startColumnIndex = 0
+        int $startColumnIndex = 0,
+        ?int $endRow = null
     ): array {
         $reader = $this->readerFor($absolutePath);
         $reader->setReadDataOnly(true);
@@ -53,7 +54,13 @@ class SpreadsheetReaderService
             : $spreadsheet->getActiveSheet();
 
         $startColumnIndex = max(0, $startColumnIndex);
-        $rows = $this->readRows($worksheet, max($headerRow + $previewRows + 10, 40), $startColumnIndex);
+        $readLimit = max($headerRow + $previewRows + 10, 40);
+
+        if ($endRow !== null) {
+            $readLimit = min($readLimit, max(1, $endRow));
+        }
+
+        $rows = $this->readRows($worksheet, $readLimit, $startColumnIndex);
         $possibleHeaderRows = $this->possibleHeaderRows($rows);
         $headerRow = max(1, min($headerRow, max(array_keys($rows) ?: [1])));
         $headerValues = $rows[$headerRow] ?? [];

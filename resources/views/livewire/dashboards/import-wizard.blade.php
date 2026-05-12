@@ -134,22 +134,40 @@
             </div>
 
             <div class="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4">
-                <label for="headerStartCell" class="block text-[13px] font-semibold leading-5 text-slate-950">Onde começam os títulos da planilha?</label>
-                <div class="mt-2 flex flex-col gap-3 sm:flex-row">
-                    <input
-                        id="headerStartCell"
-                        type="text"
-                        wire:model="headerStartCell"
-                        placeholder="A1"
-                        class="h-11 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-sm font-semibold uppercase text-slate-950 placeholder:text-slate-400 transition focus:border-seduc-primary focus:outline-none focus:ring-4 focus:ring-blue-100 sm:w-28"
-                    >
-                    <p class="text-sm leading-6 text-slate-600">
-                        Use <span class="font-semibold text-slate-950">A2</span> quando a primeira linha estiver vazia e os títulos começarem na segunda linha.
-                    </p>
+                <p class="text-[13px] font-semibold leading-5 text-slate-950">Intervalo da planilha</p>
+                <div class="mt-3 grid gap-4 md:grid-cols-2">
+                    <div class="space-y-2">
+                        <label for="headerStartCell" class="block text-xs font-semibold text-slate-600">Títulos começam em</label>
+                        <input
+                            id="headerStartCell"
+                            type="text"
+                            wire:model="headerStartCell"
+                            placeholder="A1"
+                            class="h-11 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-sm font-semibold uppercase text-slate-950 placeholder:text-slate-400 transition focus:border-seduc-primary focus:outline-none focus:ring-4 focus:ring-blue-100"
+                        >
+                        @error('headerStartCell')
+                            <p class="text-xs font-semibold text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="dataEndCell" class="block text-xs font-semibold text-slate-600">Dados terminam em</label>
+                        <input
+                            id="dataEndCell"
+                            type="text"
+                            wire:model="dataEndCell"
+                            placeholder="Opcional, ex.: A18"
+                            class="h-11 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-sm font-semibold uppercase text-slate-950 placeholder:text-slate-400 transition focus:border-seduc-primary focus:outline-none focus:ring-4 focus:ring-blue-100"
+                        >
+                        @error('dataEndCell')
+                            <p class="text-xs font-semibold text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
                 </div>
-                @error('headerStartCell')
-                    <p class="mt-2 text-xs font-semibold text-red-600">{{ $message }}</p>
-                @enderror
+
+                <p class="mt-3 text-sm leading-6 text-slate-600">
+                    Use <span class="font-semibold text-slate-950">A2</span> quando os títulos começarem na segunda linha e <span class="font-semibold text-slate-950">A18</span> para ignorar somas ou observações abaixo dessa linha.
+                </p>
             </div>
         </x-card>
 
@@ -184,18 +202,34 @@
                 </p>
 
                 <div class="mt-5 space-y-4">
-                    <div class="space-y-2">
-                        <label for="headerStartCellPreview" class="block text-[13px] font-semibold leading-5 text-slate-950">Célula inicial dos títulos</label>
-                        <input
-                            id="headerStartCellPreview"
-                            type="text"
-                            wire:model="headerStartCell"
-                            placeholder="A1"
-                            class="h-11 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-sm font-semibold uppercase text-slate-950 placeholder:text-slate-400 transition focus:border-seduc-primary focus:outline-none focus:ring-4 focus:ring-blue-100"
-                        >
-                        @error('headerStartCell')
-                            <p class="text-xs font-semibold text-red-600">{{ $message }}</p>
-                        @enderror
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div class="space-y-2">
+                            <label for="headerStartCellPreview" class="block text-[13px] font-semibold leading-5 text-slate-950">Títulos começam em</label>
+                            <input
+                                id="headerStartCellPreview"
+                                type="text"
+                                wire:model="headerStartCell"
+                                placeholder="A1"
+                                class="h-11 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-sm font-semibold uppercase text-slate-950 placeholder:text-slate-400 transition focus:border-seduc-primary focus:outline-none focus:ring-4 focus:ring-blue-100"
+                            >
+                            @error('headerStartCell')
+                                <p class="text-xs font-semibold text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="dataEndCellPreview" class="block text-[13px] font-semibold leading-5 text-slate-950">Dados terminam em</label>
+                            <input
+                                id="dataEndCellPreview"
+                                type="text"
+                                wire:model="dataEndCell"
+                                placeholder="Opcional"
+                                class="h-11 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-sm font-semibold uppercase text-slate-950 placeholder:text-slate-400 transition focus:border-seduc-primary focus:outline-none focus:ring-4 focus:ring-blue-100"
+                            >
+                            @error('dataEndCell')
+                                <p class="text-xs font-semibold text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
                     </div>
 
                     <div class="space-y-2">
@@ -288,7 +322,7 @@
                 <div>
                     <h3 class="text-lg font-bold text-slate-950">Prévia dos dados</h3>
                     <p class="mt-1 text-sm leading-6 text-slate-600">
-                        Mostrando até {{ config('seduc-bi.imports.preview_rows', 20) }} linhas para conferência. Os dados finais ainda não foram salvos.
+                        Mostrando até {{ config('seduc-bi.imports.preview_rows', 20) }} linhas para conferência{{ $dataEndCell ? ', limitadas até '.$dataEndCell : '' }}. Os dados finais ainda não foram salvos.
                     </p>
                 </div>
 
