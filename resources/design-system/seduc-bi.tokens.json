@@ -1,0 +1,712 @@
+{
+  "skill_name": "seduc_bi_design_system",
+  "version": "1.0.0",
+  "description": "Design system oficial do projeto SEDUC BI. Deve ser usado para manter login, registro, dashboard, alimentar dados, importação de planilhas e telas administrativas com o mesmo padrão visual.",
+  "main_goal": "Criar todas as telas do sistema com aparência SaaS moderna, limpa, profissional, em português, com paleta azul/branco/cinza, cards arredondados, sombras suaves, sidebar fixa, dashboard com gráficos e experiência parecida com Power BI/Looker Studio simplificado.",
+  "stack_context": {
+    "framework": "Laravel",
+    "frontend": "Blade + Livewire + Tailwind CSS",
+    "interactivity": "Livewire para ações dinâmicas sem recarregar página",
+    "charts": "ApexCharts",
+    "icons": "Heroicons ou Lucide Icons",
+    "font": "Inter"
+  },
+  "global_rules": {
+    "language": "pt-BR",
+    "style": "clean_saas_dashboard",
+    "theme": "light",
+    "rounded_style": "large rounded cards",
+    "shadow_style": "soft shadows only",
+    "layout_feeling": "profissional, espaçoso, confiável e moderno",
+    "avoid": [
+      "cores muito saturadas fora da paleta",
+      "bordas grossas",
+      "sombras pesadas",
+      "textos pequenos demais",
+      "layout poluído",
+      "usar termos técnicos para usuário leigo"
+    ]
+  },
+  "colors": {
+    "brand": {
+      "primary": "#0D6EFD",
+      "primary_hover": "#0B5ED7",
+      "primary_active": "#0A58CA",
+      "primary_soft": "#EAF2FF",
+      "primary_soft_2": "#DCEBFF",
+      "primary_border": "#BFD7FF"
+    },
+    "background": {
+      "page": "#F8FAFC",
+      "page_soft_blue": "#F4F8FF",
+      "sidebar": "#FFFFFF",
+      "card": "#FFFFFF",
+      "card_soft": "#F9FBFF",
+      "input": "#FFFFFF",
+      "table_header": "#F8FAFC"
+    },
+    "text": {
+      "title": "#0F172A",
+      "body": "#334155",
+      "muted": "#64748B",
+      "light": "#94A3B8",
+      "white": "#FFFFFF",
+      "link": "#0D6EFD"
+    },
+    "border": {
+      "default": "#E2E8F0",
+      "soft": "#EDF2F7",
+      "strong": "#CBD5E1",
+      "focus": "#0D6EFD",
+      "dashed_upload": "#6EA8FE"
+    },
+    "status": {
+      "success": "#16A34A",
+      "success_soft": "#DCFCE7",
+      "success_text": "#166534",
+      "info": "#2563EB",
+      "info_soft": "#DBEAFE",
+      "info_text": "#1D4ED8",
+      "warning": "#F59E0B",
+      "warning_soft": "#FEF3C7",
+      "warning_text": "#92400E",
+      "danger": "#EF4444",
+      "danger_soft": "#FEE2E2",
+      "danger_text": "#B91C1C",
+      "purple": "#7C3AED",
+      "purple_soft": "#EDE9FE",
+      "purple_text": "#5B21B6",
+      "neutral": "#64748B",
+      "neutral_soft": "#F1F5F9",
+      "neutral_text": "#475569"
+    },
+    "chart_palette": {
+      "blue": "#0D6EFD",
+      "green": "#16A34A",
+      "red": "#EF4444",
+      "yellow": "#F59E0B",
+      "purple": "#7C3AED",
+      "cyan": "#06B6D4",
+      "gray": "#64748B"
+    }
+  },
+  "typography": {
+    "font_family": {
+      "sans": "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    },
+    "weights": {
+      "regular": 400,
+      "medium": 500,
+      "semibold": 600,
+      "bold": 700,
+      "extrabold": 800
+    },
+    "sizes": {
+      "page_title": {
+        "font_size": "28px",
+        "line_height": "36px",
+        "font_weight": 700,
+        "color": "#0F172A"
+      },
+      "section_title": {
+        "font_size": "18px",
+        "line_height": "28px",
+        "font_weight": 700,
+        "color": "#0F172A"
+      },
+      "card_title": {
+        "font_size": "14px",
+        "line_height": "20px",
+        "font_weight": 600,
+        "color": "#334155"
+      },
+      "card_value": {
+        "font_size": "24px",
+        "line_height": "32px",
+        "font_weight": 700,
+        "color": "#0F172A"
+      },
+      "body": {
+        "font_size": "14px",
+        "line_height": "22px",
+        "font_weight": 400,
+        "color": "#334155"
+      },
+      "small": {
+        "font_size": "12px",
+        "line_height": "18px",
+        "font_weight": 400,
+        "color": "#64748B"
+      },
+      "label": {
+        "font_size": "13px",
+        "line_height": "18px",
+        "font_weight": 600,
+        "color": "#0F172A"
+      },
+      "button": {
+        "font_size": "14px",
+        "line_height": "20px",
+        "font_weight": 600
+      },
+      "table": {
+        "header": {
+          "font_size": "12px",
+          "line_height": "16px",
+          "font_weight": 700,
+          "color": "#334155"
+        },
+        "cell": {
+          "font_size": "12px",
+          "line_height": "18px",
+          "font_weight": 400,
+          "color": "#334155"
+        }
+      }
+    }
+  },
+  "spacing": {
+    "page_padding": "24px",
+    "sidebar_padding": "16px",
+    "card_padding": "20px",
+    "card_padding_sm": "16px",
+    "input_padding_x": "14px",
+    "input_padding_y": "12px",
+    "button_padding_x": "18px",
+    "button_padding_y": "12px",
+    "grid_gap": "16px",
+    "section_gap": "20px",
+    "form_gap": "18px"
+  },
+  "radius": {
+    "sm": "8px",
+    "md": "10px",
+    "lg": "14px",
+    "xl": "18px",
+    "2xl": "22px",
+    "full": "9999px"
+  },
+  "shadows": {
+    "card": "0 8px 24px rgba(15, 23, 42, 0.04)",
+    "card_hover": "0 12px 32px rgba(15, 23, 42, 0.08)",
+    "sidebar": "1px 0 0 rgba(226, 232, 240, 0.9)",
+    "dropdown": "0 14px 36px rgba(15, 23, 42, 0.12)",
+    "button": "0 8px 18px rgba(13, 110, 253, 0.22)"
+  },
+  "layout": {
+    "app": {
+      "body_background": "#F8FAFC",
+      "min_height": "100vh",
+      "main_padding": "24px",
+      "content_max_width": "none"
+    },
+    "sidebar": {
+      "width": "256px",
+      "background": "#FFFFFF",
+      "border_right": "1px solid #E2E8F0",
+      "position": "fixed",
+      "height": "100vh",
+      "padding": "18px 14px",
+      "logo_height": "44px",
+      "menu_gap": "8px",
+      "bottom_user_card": true
+    },
+    "main": {
+      "margin_left": "256px",
+      "padding": "24px",
+      "background": "#F8FAFC"
+    },
+    "topbar": {
+      "height": "64px",
+      "display": "flex",
+      "align_items": "center",
+      "justify_content": "space-between",
+      "margin_bottom": "20px"
+    },
+    "dashboard_grid": {
+      "columns": 12,
+      "gap": "16px"
+    }
+  },
+  "components": {
+    "sidebar": {
+      "logo": {
+        "icon": "book-open",
+        "text": "SEDUC BI",
+        "icon_color": "#0D6EFD",
+        "text_color": "#0F172A",
+        "font_size": "20px",
+        "font_weight": 800
+      },
+      "menu_item": {
+        "height": "48px",
+        "border_radius": "10px",
+        "padding": "0 14px",
+        "font_size": "14px",
+        "font_weight": 600,
+        "color": "#334155",
+        "icon_size": "20px",
+        "hover_background": "#F1F5F9",
+        "active_background": "#0D6EFD",
+        "active_color": "#FFFFFF"
+      },
+      "items": [
+        {
+          "label": "Meus Dashboards",
+          "icon": "layout-dashboard"
+        },
+        {
+          "label": "Criar Dashboard",
+          "icon": "plus-circle"
+        },
+        {
+          "label": "Importações",
+          "icon": "cloud-upload"
+        },
+        {
+          "label": "Setores",
+          "icon": "building-2"
+        },
+        {
+          "label": "Usuários",
+          "icon": "users"
+        },
+        {
+          "label": "Configurações",
+          "icon": "settings"
+        }
+      ],
+      "user_card": {
+        "background": "#FFFFFF",
+        "border": "1px solid #E2E8F0",
+        "border_radius": "14px",
+        "padding": "12px",
+        "avatar_background": "#475569",
+        "avatar_text": "#FFFFFF"
+      }
+    },
+    "buttons": {
+      "primary": {
+        "background": "#0D6EFD",
+        "hover_background": "#0B5ED7",
+        "text": "#FFFFFF",
+        "height": "44px",
+        "border_radius": "10px",
+        "padding": "0 18px",
+        "font_weight": 600,
+        "shadow": "0 8px 18px rgba(13, 110, 253, 0.22)"
+      },
+      "secondary": {
+        "background": "#FFFFFF",
+        "hover_background": "#F8FAFC",
+        "text": "#0F172A",
+        "border": "1px solid #E2E8F0",
+        "height": "44px",
+        "border_radius": "10px",
+        "padding": "0 18px",
+        "font_weight": 600
+      },
+      "ghost": {
+        "background": "transparent",
+        "hover_background": "#F1F5F9",
+        "text": "#334155",
+        "height": "40px",
+        "border_radius": "10px",
+        "padding": "0 14px",
+        "font_weight": 600
+      },
+      "danger": {
+        "background": "#EF4444",
+        "hover_background": "#DC2626",
+        "text": "#FFFFFF",
+        "height": "44px",
+        "border_radius": "10px",
+        "padding": "0 18px",
+        "font_weight": 600
+      }
+    },
+    "cards": {
+      "default": {
+        "background": "#FFFFFF",
+        "border": "1px solid #E2E8F0",
+        "border_radius": "16px",
+        "padding": "20px",
+        "box_shadow": "0 8px 24px rgba(15, 23, 42, 0.04)"
+      },
+      "metric": {
+        "height": "92px",
+        "background": "#FFFFFF",
+        "border": "1px solid #E2E8F0",
+        "border_radius": "16px",
+        "padding": "18px",
+        "display": "flex",
+        "align_items": "center",
+        "gap": "16px",
+        "icon_box_size": "52px",
+        "icon_box_radius": "14px"
+      },
+      "insight": {
+        "background": "#FFFFFF",
+        "border": "1px solid #E2E8F0",
+        "border_radius": "16px",
+        "padding": "16px",
+        "gap": "12px"
+      }
+    },
+    "inputs": {
+      "base": {
+        "height": "44px",
+        "background": "#FFFFFF",
+        "border": "1px solid #CBD5E1",
+        "focus_border": "#0D6EFD",
+        "focus_ring": "0 0 0 3px rgba(13, 110, 253, 0.12)",
+        "border_radius": "10px",
+        "padding": "0 14px",
+        "font_size": "14px",
+        "placeholder_color": "#94A3B8",
+        "text_color": "#0F172A"
+      },
+      "select": {
+        "height": "44px",
+        "background": "#FFFFFF",
+        "border": "1px solid #CBD5E1",
+        "border_radius": "10px",
+        "padding": "0 14px"
+      },
+      "checkbox": {
+        "size": "18px",
+        "checked_background": "#0D6EFD",
+        "border_radius": "5px"
+      },
+      "toggle": {
+        "width": "42px",
+        "height": "24px",
+        "active_background": "#0D6EFD",
+        "inactive_background": "#CBD5E1",
+        "thumb_size": "18px"
+      }
+    },
+    "upload_area": {
+      "background": "#F9FBFF",
+      "border": "2px dashed #6EA8FE",
+      "border_radius": "14px",
+      "padding": "36px",
+      "text_align": "center",
+      "icon": "cloud-upload",
+      "icon_color": "#0D6EFD",
+      "icon_box_background": "#EAF2FF",
+      "title_color": "#0F172A",
+      "subtitle_color": "#64748B"
+    },
+    "tables": {
+      "container": {
+        "background": "#FFFFFF",
+        "border": "1px solid #E2E8F0",
+        "border_radius": "16px",
+        "overflow": "hidden"
+      },
+      "header": {
+        "background": "#F8FAFC",
+        "height": "44px",
+        "border_bottom": "1px solid #E2E8F0",
+        "text_color": "#334155",
+        "font_weight": 700,
+        "font_size": "12px",
+        "text_transform": "none"
+      },
+      "row": {
+        "height": "48px",
+        "border_bottom": "1px solid #EDF2F7",
+        "hover_background": "#F8FAFC"
+      },
+      "cell": {
+        "padding": "10px 14px",
+        "font_size": "12px",
+        "color": "#334155"
+      }
+    },
+    "badges": {
+      "base": {
+        "height": "24px",
+        "padding": "0 10px",
+        "border_radius": "9999px",
+        "font_size": "12px",
+        "font_weight": 600,
+        "display": "inline-flex",
+        "align_items": "center"
+      },
+      "success": {
+        "background": "#DCFCE7",
+        "text": "#166534"
+      },
+      "info": {
+        "background": "#DBEAFE",
+        "text": "#1D4ED8"
+      },
+      "warning": {
+        "background": "#FEF3C7",
+        "text": "#92400E"
+      },
+      "danger": {
+        "background": "#FEE2E2",
+        "text": "#B91C1C"
+      },
+      "purple": {
+        "background": "#EDE9FE",
+        "text": "#5B21B6"
+      },
+      "neutral": {
+        "background": "#F1F5F9",
+        "text": "#475569"
+      }
+    },
+    "auth_pages": {
+      "layout": "split",
+      "background": "#F8FAFC",
+      "left_card_width": "560px",
+      "right_panel_background": "#F4F8FF",
+      "card_background": "#FFFFFF",
+      "card_radius": "22px",
+      "card_shadow": "0 18px 48px rgba(15, 23, 42, 0.08)",
+      "hero_title_size": "40px",
+      "hero_title_line_height": "52px",
+      "form_title_size": "32px",
+      "primary_button_height": "48px"
+    },
+    "steppers": {
+      "circle_size": "28px",
+      "active_background": "#0D6EFD",
+      "active_text": "#FFFFFF",
+      "inactive_background": "#F1F5F9",
+      "inactive_text": "#64748B",
+      "line_color": "#CBD5E1"
+    },
+    "filters": {
+      "bar_background": "#FFFFFF",
+      "bar_border": "1px solid #E2E8F0",
+      "bar_radius": "16px",
+      "bar_padding": "16px",
+      "field_height": "44px"
+    }
+  },
+  "icons": {
+    "library_preference": [
+      "lucide",
+      "heroicons"
+    ],
+    "global_size": "20px",
+    "stroke_width": 1.8,
+    "map": {
+      "logo": "book-open",
+      "dashboard": "layout-dashboard",
+      "create": "plus-circle",
+      "imports": "cloud-upload",
+      "sectors": "building-2",
+      "users": "users",
+      "settings": "settings",
+      "money": "circle-dollar-sign",
+      "paid": "landmark",
+      "balance": "scale",
+      "execution": "gauge",
+      "calendar": "calendar-days",
+      "tag": "tag",
+      "upload": "upload",
+      "save": "save",
+      "refresh": "refresh-cw",
+      "back": "arrow-left",
+      "search": "search",
+      "mail": "mail",
+      "password": "lock",
+      "eye": "eye",
+      "user": "user",
+      "file_excel": "file-spreadsheet",
+      "warning": "triangle-alert",
+      "info": "circle-info",
+      "success": "circle-check",
+      "chart_bar": "bar-chart-3",
+      "chart_line": "line-chart",
+      "chart_pie": "pie-chart"
+    }
+  },
+  "apexcharts": {
+    "default_options": {
+      "fontFamily": "Inter, sans-serif",
+      "toolbar": {
+        "show": false
+      },
+      "grid": {
+        "borderColor": "#E2E8F0",
+        "strokeDashArray": 4
+      },
+      "legend": {
+        "fontFamily": "Inter, sans-serif",
+        "fontSize": "13px",
+        "labels": {
+          "colors": "#334155"
+        }
+      },
+      "dataLabels": {
+        "enabled": false
+      },
+      "tooltip": {
+        "theme": "light"
+      }
+    },
+    "colors": [
+      "#0D6EFD",
+      "#16A34A",
+      "#EF4444",
+      "#F59E0B",
+      "#7C3AED",
+      "#06B6D4",
+      "#64748B"
+    ],
+    "bar_chart": {
+      "borderRadius": 6,
+      "columnWidth": "48%",
+      "color": "#0D6EFD"
+    },
+    "donut_chart": {
+      "donut_size": "68%",
+      "labels": [
+        "Em andamento",
+        "Concluída",
+        "Não iniciada",
+        "Em licitação"
+      ],
+      "colors": [
+        "#0D6EFD",
+        "#16A34A",
+        "#EF4444",
+        "#F59E0B"
+      ]
+    },
+    "line_chart": {
+      "stroke_curve": "smooth",
+      "stroke_width": 3,
+      "marker_size": 4,
+      "fill_opacity": 0.12,
+      "color": "#0D6EFD"
+    }
+  },
+  "page_templates": {
+    "dashboard_view": {
+      "title_example": "Panorama de Obras - SUENG",
+      "breadcrumb_example": "Meus Dashboards > SUENG > Panorama de Obras",
+      "top_actions": [
+        "Editar Dashboard",
+        "Alimentar Dados"
+      ],
+      "sections": [
+        "filtros",
+        "cards de resumo",
+        "gráfico de barras",
+        "gráfico donut",
+        "gráfico de linha",
+        "indicadores",
+        "tabela resumida"
+      ]
+    },
+    "feed_data": {
+      "title": "Alimentar Dados",
+      "subtitle": "Adicione novas linhas, importe planilhas ou atualize registros existentes sem alterar a estrutura do dashboard.",
+      "top_actions": [
+        "Voltar ao Dashboard",
+        "Atualizar",
+        "Salvar Importação"
+      ],
+      "sections": [
+        "resumo superior",
+        "importar planilha",
+        "configuração da atualização",
+        "prévia dos dados a importar",
+        "resumo da importação",
+        "campos detectados",
+        "inconsistências encontradas"
+      ]
+    },
+    "login": {
+      "title": "Entrar na sua conta",
+      "subtitle": "Acesse seus dashboards e acompanhe os dados do seu setor.",
+      "fields": [
+        "E-mail",
+        "Senha"
+      ],
+      "actions": [
+        "Entrar",
+        "Esqueci minha senha",
+        "Cadastre-se"
+      ]
+    },
+    "register": {
+      "title": "Crie sua conta",
+      "subtitle": "Cadastre-se para acessar os dashboards do seu setor.",
+      "fields": [
+        "Nome completo",
+        "E-mail",
+        "Código do setor",
+        "Senha",
+        "Confirmar senha"
+      ],
+      "helper_text": "Informe o código fornecido pelo administrador do seu setor.",
+      "actions": [
+        "Criar conta",
+        "Entrar"
+      ]
+    }
+  },
+  "copywriting": {
+    "tone": "simples, claro e profissional",
+    "avoid_terms": [
+      "string",
+      "integer",
+      "float",
+      "boolean"
+    ],
+    "friendly_column_types": [
+      "Texto curto",
+      "Texto longo",
+      "Número",
+      "Dinheiro",
+      "Porcentagem",
+      "Data",
+      "Opção/Categoria",
+      "Código/Identificador",
+      "Sim/Não",
+      "Ignorar coluna"
+    ],
+    "examples": {
+      "money": "Use para valores em reais, pagamentos, saldos e investimentos.",
+      "text": "Use para nomes, cidades, municípios, status e descrições.",
+      "number": "Use para quantidades e totais numéricos.",
+      "percent": "Use para execução, progresso ou percentuais.",
+      "date": "Use para prazos, datas de início e datas de pagamento.",
+      "identifier": "Use para código de obra, número de processo, convênio ou ID."
+    }
+  },
+  "tailwind_mapping": {
+    "body": "bg-slate-50 text-slate-700 font-sans",
+    "card": "bg-white border border-slate-200 rounded-2xl shadow-[0_8px_24px_rgba(15,23,42,0.04)]",
+    "primary_button": "bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-[0_8px_18px_rgba(13,110,253,0.22)]",
+    "secondary_button": "bg-white hover:bg-slate-50 text-slate-900 border border-slate-200 font-semibold rounded-xl",
+    "input": "bg-white border border-slate-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 rounded-xl text-slate-900 placeholder:text-slate-400",
+    "label": "text-sm font-semibold text-slate-900",
+    "muted_text": "text-sm text-slate-500",
+    "sidebar_active": "bg-blue-600 text-white rounded-xl",
+    "sidebar_item": "text-slate-700 hover:bg-slate-100 rounded-xl",
+    "badge_success": "bg-green-100 text-green-800 rounded-full",
+    "badge_info": "bg-blue-100 text-blue-700 rounded-full",
+    "badge_warning": "bg-amber-100 text-amber-800 rounded-full",
+    "badge_danger": "bg-red-100 text-red-700 rounded-full",
+    "badge_purple": "bg-violet-100 text-violet-800 rounded-full"
+  },
+  "codex_tasks": [
+    "Criar um arquivo resources/design-system/seduc-bi.tokens.json com estes tokens.",
+    "Configurar tailwind.config.js para usar fontFamily Inter e cores personalizadas.",
+    "Criar componentes Blade reutilizáveis para button, card, input, select, badge, sidebar, metric-card, table e upload-area.",
+    "Criar um helper ou config PHP para acessar cores e tipos de gráfico.",
+    "Criar um componente Livewire base para páginas com sidebar e topbar.",
+    "Aplicar este design system nas telas de login, registro, dashboard, alimentar dados, criar dashboard, edição e admin.",
+    "Criar configuração padrão do ApexCharts usando as cores e estilos definidos neste JSON."
+  ]
+}
