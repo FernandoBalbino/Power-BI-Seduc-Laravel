@@ -10,19 +10,19 @@ return [
         [
             'label' => 'Meus Dashboards',
             'route' => 'dashboards.index',
-            'active' => ['dashboard', 'dashboards.*'],
+            'active' => ['dashboard', 'dashboards.index', 'dashboards.show', 'dashboards.edit-basic', 'dashboards.edit'],
             'icon' => 'layout-dashboard',
         ],
         [
             'label' => 'Criar Dashboard',
-            'route' => 'dashboard',
+            'route' => 'dashboards.create',
             'active' => ['dashboards.create'],
             'icon' => 'plus-circle',
         ],
         [
             'label' => 'Importações',
-            'route' => 'dashboard',
-            'active' => ['imports.*'],
+            'route' => 'dashboards.index',
+            'active' => ['dashboards.import', 'dashboards.feed'],
             'icon' => 'cloud-upload',
         ],
         [

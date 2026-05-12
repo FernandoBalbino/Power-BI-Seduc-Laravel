@@ -16,7 +16,7 @@
         @foreach (config('seduc-bi.menu') as $item)
             @php
                 $isActive = collect($item['active'])->contains(fn ($pattern) => request()->routeIs($pattern));
-                $href = Route::has($item['route']) ? route($item['route']) : route('dashboard');
+                $href = Route::has($item['route']) ? route($item['route']) : route('dashboards.index');
             @endphp
 
             <a

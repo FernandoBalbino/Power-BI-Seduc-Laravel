@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Enums\UserRole;
 use App\Livewire\Admin\Sectors\Create as SectorCreate;
 use App\Livewire\Auth\Register;
+use App\Livewire\Dashboards\Create as DashboardCreate;
+use App\Models\Dashboard;
 use App\Models\Sector;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -36,12 +38,13 @@ class ExampleTest extends TestCase
 
     public function test_authenticated_user_can_see_dashboard(): void
     {
-        $user = User::factory()->create();
+        $sector = Sector::factory()->create();
+        $user = User::factory()->create(['sector_id' => $sector->id]);
 
         $this->actingAs($user)
             ->get('/dashboards')
             ->assertOk()
-            ->assertSee('Bem-vindo ao SEDUC BI');
+            ->assertSee('Dashboards do setor');
     }
 
     public function test_admin_middleware_blocks_setor_users(): void
@@ -120,5 +123,68 @@ class ExampleTest extends TestCase
         $this->assertDatabaseMissing('users', [
             'email' => 'carlos@example.com',
         ]);
+    }
+
+    public function test_sector_user_can_create_dashboard(): void
+    {
+        $sector = Sector::factory()->create();
+        $user = User::factory()->create(['sector_id' => $sector->id]);
+
+        $this->actingAs($user);
+
+        Livewire::test(DashboardCreate::class)
+            ->set('name', 'Panorama de Obras')
+            ->set('description', 'Acompanhamento inicial de obras do setor.')
+            ->call('save')
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('dashboards', [
+            'name' => 'Panorama de Obras',
+            'sector_id' => $sector->id,
+            'user_id' => $user->id,
+            'status' => 'draft',
+        ]);
+    }
+
+    public function test_sector_user_only_sees_dashboards_from_own_sector(): void
+    {
+        $sector = Sector::factory()->create();
+        $otherSector = Sector::factory()->create();
+        $user = User::factory()->create(['sector_id' => $sector->id]);
+        $otherUser = User::factory()->create(['sector_id' => $otherSector->id]);
+
+        Dashboard::factory()->create([
+            'sector_id' => $sector->id,
+            'user_id' => $user->id,
+            'name' => 'Dashboard do Meu Setor',
+        ]);
+
+        Dashboard::factory()->create([
+            'sector_id' => $otherSector->id,
+            'user_id' => $otherUser->id,
+            'name' => 'Dashboard de Outro Setor',
+        ]);
+
+        $this->actingAs($user)
+            ->get('/dashboards')
+            ->assertOk()
+            ->assertSee('Dashboard do Meu Setor')
+            ->assertDontSee('Dashboard de Outro Setor');
+    }
+
+    public function test_sector_user_cannot_open_dashboard_from_another_sector(): void
+    {
+        $sector = Sector::factory()->create();
+        $otherSector = Sector::factory()->create();
+        $user = User::factory()->create(['sector_id' => $sector->id]);
+        $otherUser = User::factory()->create(['sector_id' => $otherSector->id]);
+        $dashboard = Dashboard::factory()->create([
+            'sector_id' => $otherSector->id,
+            'user_id' => $otherUser->id,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('dashboards.show', $dashboard))
+            ->assertForbidden();
     }
 }

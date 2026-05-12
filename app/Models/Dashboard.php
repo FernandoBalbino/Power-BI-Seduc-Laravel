@@ -1,0 +1,63 @@
+<?php
+
+namespace App\Models;
+
+use App\Enums\DashboardStatus;
+use Database\Factories\DashboardFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+#[Fillable(['sector_id', 'user_id', 'name', 'description', 'status'])]
+class Dashboard extends Model
+{
+    /** @use HasFactory<DashboardFactory> */
+    use HasFactory;
+
+    public function sector(): BelongsTo
+    {
+        return $this->belongsTo(Sector::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        if ($user->isAdmin()) {
+            return $query;
+        }
+
+        if (! $user->sector_id) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where('sector_id', $user->sector_id);
+    }
+
+    public function canBeAccessedBy(User $user): bool
+    {
+        return $user->isAdmin() || ($user->sector_id !== null && $this->sector_id === $user->sector_id);
+    }
+
+    public function recordsCount(): int
+    {
+        return 0;
+    }
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'status' => DashboardStatus::class,
+        ];
+    }
+}

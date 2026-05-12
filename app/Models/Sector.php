@@ -22,7 +22,7 @@ class Sector extends Model
 
     public function dashboards(): HasMany
     {
-        return $this->hasMany('App\\Models\\Dashboard');
+        return $this->hasMany(Dashboard::class);
     }
 
     public function scopeActive(Builder $query): Builder
