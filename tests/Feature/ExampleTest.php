@@ -2,15 +2,22 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DashboardImportStatus;
 use App\Enums\UserRole;
 use App\Livewire\Admin\Sectors\Create as SectorCreate;
 use App\Livewire\Auth\Register;
 use App\Livewire\Dashboards\Create as DashboardCreate;
+use App\Livewire\Dashboards\ImportWizard;
 use App\Models\Dashboard;
 use App\Models\Sector;
 use App\Models\User;
+use App\Services\SpreadsheetReaderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Tests\TestCase;
 
 class ExampleTest extends TestCase
@@ -186,5 +193,88 @@ class ExampleTest extends TestCase
         $this->actingAs($user)
             ->get(route('dashboards.show', $dashboard))
             ->assertForbidden();
+    }
+
+    public function test_import_wizard_reads_csv_preview(): void
+    {
+        Storage::fake('local');
+
+        $sector = Sector::factory()->create();
+        $user = User::factory()->create(['sector_id' => $sector->id]);
+        $dashboard = Dashboard::factory()->create([
+            'sector_id' => $sector->id,
+            'user_id' => $user->id,
+        ]);
+
+        $this->actingAs($user);
+
+        $component = Livewire::test(ImportWizard::class, ['dashboard' => $dashboard])
+            ->set('file', UploadedFile::fake()->createWithContent(
+                'obras.csv',
+                "Município,Valor previsto,Status\nMaceió,100000,Em andamento\nArapiraca,250000,Concluída\n"
+            ))
+            ->call('uploadFile')
+            ->assertSet('step', 3)
+            ->assertSee('Município')
+            ->assertSee('Maceió');
+
+        $columns = $component->get('columns');
+
+        $this->assertSame('Município', $columns[0]['name']);
+        $this->assertSame('municipio', $columns[0]['normalized_name']);
+        $this->assertSame(['Maceió', 'Arapiraca'], array_slice($columns[0]['samples'], 0, 2));
+
+        $this->assertDatabaseHas('dashboard_imports', [
+            'dashboard_id' => $dashboard->id,
+            'original_filename' => 'obras.csv',
+            'status' => DashboardImportStatus::Mapped->value,
+            'sheet_name' => $component->get('selectedSheet'),
+        ]);
+    }
+
+    public function test_spreadsheet_reader_reads_xlsx_sheets_columns_and_preview(): void
+    {
+        $path = storage_path('framework/testing/import-wizard-sample.xlsx');
+
+        if (! is_dir(dirname($path))) {
+            mkdir(dirname($path), 0777, true);
+        }
+
+        $spreadsheet = new Spreadsheet;
+        $spreadsheet->getActiveSheet()
+            ->setTitle('Resumo')
+            ->fromArray([
+                ['Indicador', 'Total'],
+                ['Obras', 2],
+            ]);
+
+        $sheet = $spreadsheet->createSheet();
+        $sheet->setTitle('Obras')
+            ->fromArray([
+                ['Cidade', 'Investimento', 'Execução'],
+                ['Maceió', 120000, '53%'],
+                ['Penedo', 80000, '41%'],
+            ]);
+
+        (new Xlsx($spreadsheet))->save($path);
+        $spreadsheet->disconnectWorksheets();
+
+        try {
+            $reader = app(SpreadsheetReaderService::class);
+
+            $this->assertSame(['Resumo', 'Obras'], $reader->sheetNames($path));
+
+            $preview = $reader->preview($path, 'Obras', 1, 10);
+
+            $this->assertSame('Obras', $preview['sheet_name']);
+            $this->assertSame('cidade', $preview['columns'][0]['normalized_name']);
+            $this->assertSame('investimento', $preview['columns'][1]['normalized_name']);
+            $this->assertSame('Maceió', $preview['rows'][0]['values'][0]);
+            $this->assertSame('Penedo', $preview['rows'][1]['values'][0]);
+        } finally {
+            if (is_file($path)) {
+                unlink($path);
+            }
+        }
     }
 }

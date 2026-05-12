@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['sector_id', 'user_id', 'name', 'description', 'status'])]
 class Dashboard extends Model
@@ -24,6 +26,16 @@ class Dashboard extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function imports(): HasMany
+    {
+        return $this->hasMany(DashboardImport::class);
+    }
+
+    public function latestImport(): HasOne
+    {
+        return $this->hasOne(DashboardImport::class)->latestOfMany();
     }
 
     public function scopeVisibleTo(Builder $query, User $user): Builder

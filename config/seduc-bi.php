@@ -67,4 +67,9 @@ return [
         '#06B6D4',
         '#64748B',
     ],
+
+    'imports' => [
+        'max_upload_kb' => env('SEDUC_BI_IMPORT_MAX_UPLOAD_KB', 10240),
+        'preview_rows' => 20,
+    ],
 ];
