@@ -32,8 +32,13 @@ class SpreadsheetReaderService
      *     rows: array<int, array{row_number: int, values: array<int, string>}>
      * }
      */
-    public function preview(string $absolutePath, ?string $sheetName = null, int $headerRow = 1, int $previewRows = 20): array
-    {
+    public function preview(
+        string $absolutePath,
+        ?string $sheetName = null,
+        int $headerRow = 1,
+        int $previewRows = 20,
+        int $startColumnIndex = 0
+    ): array {
         $reader = $this->readerFor($absolutePath);
         $reader->setReadDataOnly(true);
         $reader->setReadEmptyCells(true);
@@ -47,12 +52,13 @@ class SpreadsheetReaderService
             ? $spreadsheet->getSheetByName($sheetName) ?? $spreadsheet->getActiveSheet()
             : $spreadsheet->getActiveSheet();
 
-        $rows = $this->readRows($worksheet, max($headerRow + $previewRows + 10, 40));
+        $startColumnIndex = max(0, $startColumnIndex);
+        $rows = $this->readRows($worksheet, max($headerRow + $previewRows + 10, 40), $startColumnIndex);
         $possibleHeaderRows = $this->possibleHeaderRows($rows);
         $headerRow = max(1, min($headerRow, max(array_keys($rows) ?: [1])));
         $headerValues = $rows[$headerRow] ?? [];
         $dataRows = $this->previewRows($rows, $headerRow, $previewRows);
-        $columns = $this->columns($headerValues, $dataRows);
+        $columns = $this->columns($headerValues, $dataRows, $startColumnIndex);
 
         $spreadsheet->disconnectWorksheets();
 
@@ -74,24 +80,64 @@ class SpreadsheetReaderService
 
         if ($reader instanceof Csv) {
             $reader->setTestAutoDetect(true);
+            $reader->setDelimiter($this->detectCsvDelimiter($absolutePath));
         }
 
         return $reader;
     }
 
+    private function detectCsvDelimiter(string $absolutePath): string
+    {
+        $handle = fopen($absolutePath, 'r');
+
+        if (! $handle) {
+            return ',';
+        }
+
+        $scores = [
+            ',' => 0,
+            ';' => 0,
+            "\t" => 0,
+            '|' => 0,
+        ];
+        $checkedLines = 0;
+
+        while (($line = fgets($handle)) !== false && $checkedLines < 10) {
+            $line = trim($line);
+
+            if ($line === '') {
+                continue;
+            }
+
+            foreach (array_keys($scores) as $delimiter) {
+                $scores[$delimiter] += max(count(str_getcsv($line, $delimiter)) - 1, 0);
+            }
+
+            $checkedLines++;
+        }
+
+        fclose($handle);
+
+        arsort($scores);
+
+        return array_key_first($scores) ?: ',';
+    }
+
     /**
      * @return array<int, array<int, string>>
      */
-    private function readRows(Worksheet $worksheet, int $limit): array
+    private function readRows(Worksheet $worksheet, int $limit, int $startColumnIndex): array
     {
         $highestDataRow = min($worksheet->getHighestDataRow(), $limit);
         $highestDataColumn = $worksheet->getHighestDataColumn();
+        $highestDataColumnIndex = Coordinate::columnIndexFromString($highestDataColumn);
 
-        if ($highestDataRow < 1 || ($highestDataColumn === 'A' && $worksheet->getCell('A1')->getValue() === null)) {
+        if ($highestDataRow < 1 || $startColumnIndex + 1 > $highestDataColumnIndex) {
             return [];
         }
 
-        $range = 'A1:'.$highestDataColumn.$highestDataRow;
+        $startColumn = Coordinate::stringFromColumnIndex($startColumnIndex + 1);
+        $range = $startColumn.'1:'.$highestDataColumn.$highestDataRow;
         $rawRows = $worksheet->rangeToArray($range, null, true, false, false);
         $rows = [];
 
@@ -165,7 +211,7 @@ class SpreadsheetReaderService
      * @param  array<int, array{row_number: int, values: array<int, string>}>  $dataRows
      * @return array<int, array{index: int, letter: string, name: string, normalized_name: string, samples: array<int, string>}>
      */
-    private function columns(array $headerValues, array $dataRows): array
+    private function columns(array $headerValues, array $dataRows, int $startColumnIndex): array
     {
         $highestColumnIndex = max(
             count($headerValues),
@@ -195,7 +241,7 @@ class SpreadsheetReaderService
 
             $columns[] = [
                 'index' => $index,
-                'letter' => Coordinate::stringFromColumnIndex($index + 1),
+                'letter' => Coordinate::stringFromColumnIndex($startColumnIndex + $index + 1),
                 'name' => $name,
                 'normalized_name' => $normalizedName,
                 'samples' => $samples,

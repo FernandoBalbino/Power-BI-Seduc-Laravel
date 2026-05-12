@@ -232,6 +232,39 @@ class ExampleTest extends TestCase
         ]);
     }
 
+    public function test_import_wizard_uses_header_start_cell_before_reading_file(): void
+    {
+        Storage::fake('local');
+
+        $sector = Sector::factory()->create();
+        $user = User::factory()->create(['sector_id' => $sector->id]);
+        $dashboard = Dashboard::factory()->create([
+            'sector_id' => $sector->id,
+            'user_id' => $user->id,
+        ]);
+
+        $this->actingAs($user);
+
+        $component = Livewire::test(ImportWizard::class, ['dashboard' => $dashboard])
+            ->set('headerStartCell', 'A2')
+            ->set('file', UploadedFile::fake()->createWithContent(
+                'processos.csv',
+                "\nEMPRESA,PROCESSO,VALOR,ASSUNTO\nEmpresa A,E:01800.000001/2026,R$ 203.534,80,Transporte\nEmpresa B,E:01800.000002/2026,R$ 735,56,Horas Extras\n"
+            ))
+            ->call('uploadFile')
+            ->assertSet('headerStartCell', 'A2')
+            ->assertSet('headerRow', 2)
+            ->assertSee('EMPRESA')
+            ->assertSee('Empresa A');
+
+        $columns = $component->get('columns');
+
+        $this->assertSame('EMPRESA', $columns[0]['name']);
+        $this->assertSame('empresa', $columns[0]['normalized_name']);
+        $this->assertSame('A', $columns[0]['letter']);
+        $this->assertSame('Empresa A', $component->get('previewRows')[0]['values'][0]);
+    }
+
     public function test_spreadsheet_reader_reads_xlsx_sheets_columns_and_preview(): void
     {
         $path = storage_path('framework/testing/import-wizard-sample.xlsx');
@@ -271,6 +304,40 @@ class ExampleTest extends TestCase
             $this->assertSame('investimento', $preview['columns'][1]['normalized_name']);
             $this->assertSame('Maceió', $preview['rows'][0]['values'][0]);
             $this->assertSame('Penedo', $preview['rows'][1]['values'][0]);
+        } finally {
+            if (is_file($path)) {
+                unlink($path);
+            }
+        }
+    }
+
+    public function test_spreadsheet_reader_can_start_header_on_another_column(): void
+    {
+        $path = storage_path('framework/testing/import-wizard-offset.xlsx');
+
+        if (! is_dir(dirname($path))) {
+            mkdir(dirname($path), 0777, true);
+        }
+
+        $spreadsheet = new Spreadsheet;
+        $spreadsheet->getActiveSheet()
+            ->setTitle('Processos')
+            ->fromArray([
+                ['', '', '', ''],
+                ['', 'EMPRESA', 'PROCESSO', 'VALOR'],
+                ['', 'Empresa A', 'E:01800.000001/2026', 'R$ 203.534,80'],
+            ]);
+
+        (new Xlsx($spreadsheet))->save($path);
+        $spreadsheet->disconnectWorksheets();
+
+        try {
+            $preview = app(SpreadsheetReaderService::class)
+                ->preview($path, 'Processos', 2, 10, 1);
+
+            $this->assertSame('EMPRESA', $preview['columns'][0]['name']);
+            $this->assertSame('B', $preview['columns'][0]['letter']);
+            $this->assertSame('Empresa A', $preview['rows'][0]['values'][0]);
         } finally {
             if (is_file($path)) {
                 unlink($path);

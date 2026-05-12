@@ -61,8 +61,38 @@
 
     <form wire:submit="uploadFile" class="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
         <x-card>
-            <label for="spreadsheet-file" class="block cursor-pointer rounded-[14px] border-2 border-dashed border-[#6EA8FE] bg-[#F9FBFF] px-6 py-10 text-center transition hover:bg-blue-50">
+            <div
+                x-data="{
+                    dragging: false,
+                    browse() {
+                        this.$refs.file.click();
+                    },
+                    dropFile(event) {
+                        const files = event.dataTransfer.files;
+
+                        if (! files.length) {
+                            return;
+                        }
+
+                        this.$refs.file.files = files;
+                        this.$refs.file.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }"
+                role="button"
+                tabindex="0"
+                data-testid="spreadsheet-dropzone"
+                @click="browse()"
+                @keydown.enter.prevent="browse()"
+                @keydown.space.prevent="browse()"
+                @dragover.prevent="dragging = true"
+                @dragenter.prevent="dragging = true"
+                @dragleave.prevent="dragging = false"
+                @drop.prevent="dragging = false; dropFile($event)"
+                class="block cursor-pointer rounded-[14px] border-2 border-dashed border-[#6EA8FE] bg-[#F9FBFF] px-6 py-10 text-center transition hover:bg-blue-50"
+                :class="dragging ? 'border-seduc-primary bg-blue-50 ring-4 ring-blue-100' : ''"
+            >
                 <input
+                    x-ref="file"
                     id="spreadsheet-file"
                     type="file"
                     wire:model="file"
@@ -73,16 +103,16 @@
                 <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-seduc-primary-soft text-seduc-primary">
                     <x-icon name="cloud-upload" class="h-7 w-7" />
                 </div>
-                <h3 class="mt-5 text-xl font-bold text-slate-950">Selecione a planilha</h3>
+                <h3 class="mt-5 text-xl font-bold text-slate-950">Selecione ou arraste a planilha</h3>
                 <p class="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-                    Use arquivos .xlsx ou .csv com até {{ $this->maxUploadMb }} MB. Linhas vazias serão ignoradas na prévia.
+                    Solte o arquivo aqui ou procure no computador. Use .xlsx ou .csv com até {{ $this->maxUploadMb }} MB.
                 </p>
 
                 <div class="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-[10px] bg-seduc-primary px-[18px] text-sm font-semibold text-white shadow-seduc-button">
                     <x-icon name="file-spreadsheet" class="h-4 w-4" />
                     Procurar arquivo
                 </div>
-            </label>
+            </div>
 
             @error('file')
                 <p class="mt-3 text-sm font-semibold text-red-600">{{ $message }}</p>
@@ -101,6 +131,25 @@
                 @else
                     <p class="mt-1 text-sm text-slate-500">Nenhum arquivo selecionado ainda.</p>
                 @endif
+            </div>
+
+            <div class="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                <label for="headerStartCell" class="block text-[13px] font-semibold leading-5 text-slate-950">Onde começam os títulos da planilha?</label>
+                <div class="mt-2 flex flex-col gap-3 sm:flex-row">
+                    <input
+                        id="headerStartCell"
+                        type="text"
+                        wire:model="headerStartCell"
+                        placeholder="A1"
+                        class="h-11 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-sm font-semibold uppercase text-slate-950 placeholder:text-slate-400 transition focus:border-seduc-primary focus:outline-none focus:ring-4 focus:ring-blue-100 sm:w-28"
+                    >
+                    <p class="text-sm leading-6 text-slate-600">
+                        Use <span class="font-semibold text-slate-950">A2</span> quando a primeira linha estiver vazia e os títulos começarem na segunda linha.
+                    </p>
+                </div>
+                @error('headerStartCell')
+                    <p class="mt-2 text-xs font-semibold text-red-600">{{ $message }}</p>
+                @enderror
             </div>
         </x-card>
 
@@ -135,6 +184,20 @@
                 </p>
 
                 <div class="mt-5 space-y-4">
+                    <div class="space-y-2">
+                        <label for="headerStartCellPreview" class="block text-[13px] font-semibold leading-5 text-slate-950">Célula inicial dos títulos</label>
+                        <input
+                            id="headerStartCellPreview"
+                            type="text"
+                            wire:model="headerStartCell"
+                            placeholder="A1"
+                            class="h-11 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-sm font-semibold uppercase text-slate-950 placeholder:text-slate-400 transition focus:border-seduc-primary focus:outline-none focus:ring-4 focus:ring-blue-100"
+                        >
+                        @error('headerStartCell')
+                            <p class="text-xs font-semibold text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                     <div class="space-y-2">
                         <label for="selectedSheet" class="block text-[13px] font-semibold leading-5 text-slate-950">Aba da planilha</label>
                         <select

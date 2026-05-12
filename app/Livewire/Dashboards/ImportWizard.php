@@ -12,6 +12,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use Throwable;
 
 class ImportWizard extends Component
@@ -31,6 +32,10 @@ class ImportWizard extends Component
     public ?string $selectedSheet = null;
 
     public int $headerRow = 1;
+
+    public string $headerStartCell = 'A1';
+
+    public int $headerStartColumnIndex = 0;
 
     public array $sheets = [];
 
@@ -58,8 +63,10 @@ class ImportWizard extends Component
     public function uploadFile(): void
     {
         $this->validateUpload();
+        $this->syncHeaderStartFromCell();
 
         $this->resetImportState();
+        $this->syncHeaderStartFromCell();
 
         $extension = Str::lower($this->file->getClientOriginalExtension());
         $originalFilename = $this->file->getClientOriginalName();
@@ -85,7 +92,6 @@ class ImportWizard extends Component
             $absolutePath = Storage::disk('local')->path($filePath);
             $this->sheets = $reader->sheetNames($absolutePath);
             $this->selectedSheet = $this->sheets[0] ?? null;
-            $this->headerRow = 1;
             $this->loadPreview($reader);
         } catch (Throwable $exception) {
             report($exception);
@@ -108,11 +114,14 @@ class ImportWizard extends Component
         }
 
         $reader ??= app(SpreadsheetReaderService::class);
+        $this->syncHeaderStartFromCell();
+
         $analysis = $reader->preview(
             Storage::disk('local')->path($import->file_path),
             $this->selectedSheet,
             $this->headerRow,
-            (int) config('seduc-bi.imports.preview_rows', 20)
+            (int) config('seduc-bi.imports.preview_rows', 20),
+            $this->headerStartColumnIndex
         );
 
         $this->selectedSheet = $analysis['sheet_name'];
@@ -136,7 +145,7 @@ class ImportWizard extends Component
     public function updatedSelectedSheet(): void
     {
         if ($this->importId) {
-            $this->headerRow = 1;
+            $this->syncHeaderStartFromCell();
             $this->loadPreview();
         }
     }
@@ -144,6 +153,8 @@ class ImportWizard extends Component
     public function updatedHeaderRow(): void
     {
         if ($this->importId) {
+            $this->headerRow = max(1, (int) $this->headerRow);
+            $this->headerStartCell = Coordinate::stringFromColumnIndex($this->headerStartColumnIndex + 1).$this->headerRow;
             $this->loadPreview();
         }
     }
@@ -165,6 +176,12 @@ class ImportWizard extends Component
         $maxKb = (int) config('seduc-bi.imports.max_upload_kb', 10240);
 
         $this->validate([
+            'headerStartCell' => [
+                'required',
+                'string',
+                'max:8',
+                'regex:/^[A-Za-z]{1,3}[1-9][0-9]{0,4}$/',
+            ],
             'file' => [
                 'required',
                 'file',
@@ -178,6 +195,8 @@ class ImportWizard extends Component
                 },
             ],
         ], [
+            'headerStartCell.required' => 'Informe onde começam os títulos da planilha.',
+            'headerStartCell.regex' => 'Informe uma célula válida, como A1 ou A2.',
             'file.required' => 'Selecione uma planilha para importar.',
             'file.file' => 'Selecione um arquivo válido.',
             'file.max' => 'A planilha deve ter no máximo '.$this->maxUploadMb.' MB.',
@@ -208,7 +227,6 @@ class ImportWizard extends Component
         $this->importId = null;
         $this->uploadedFilename = null;
         $this->selectedSheet = null;
-        $this->headerRow = 1;
         $this->sheets = [];
         $this->possibleHeaderRows = [];
         $this->columns = [];
@@ -217,5 +235,22 @@ class ImportWizard extends Component
         $this->importStatus = null;
         $this->importStatusLabel = null;
         $this->importStatusVariant = null;
+    }
+
+    private function syncHeaderStartFromCell(): void
+    {
+        $cell = Str::upper(trim($this->headerStartCell));
+
+        if (! preg_match('/^[A-Z]{1,3}[1-9][0-9]{0,4}$/', $cell)) {
+            throw ValidationException::withMessages([
+                'headerStartCell' => 'Informe uma célula válida, como A1 ou A2.',
+            ]);
+        }
+
+        [$column, $row] = Coordinate::coordinateFromString($cell);
+
+        $this->headerRow = (int) $row;
+        $this->headerStartColumnIndex = Coordinate::columnIndexFromString($column) - 1;
+        $this->headerStartCell = $column.$this->headerRow;
     }
 }
