@@ -1,10 +1,10 @@
 <div class="mx-auto w-full max-w-[380px]">
-    <div class="mb-6 text-center">
+    <div class="mb-5 text-center">
         <h1 class="text-[30px] font-bold leading-10 text-slate-950">Crie sua conta</h1>
-        <p class="mt-3 text-sm leading-6 text-slate-400">Cadastre-se para acessar os dashboards do seu setor.</p>
+        <p class="mt-2 text-sm leading-6 text-slate-400">Use o código recebido para acessar os dashboards do seu setor.</p>
     </div>
 
-    <form wire:submit="register" class="space-y-4">
+    <form wire:submit="register" class="space-y-3">
         <x-input
             label="Nome completo"
             name="name"
@@ -23,9 +23,13 @@
             :error="$errors->first('email')"
         />
 
-        <div class="rounded-xl border border-blue-100 bg-seduc-primary-soft p-3 text-sm leading-6 text-slate-600">
-            O vínculo por código do setor será ativado na próxima etapa. Por enquanto, sua conta fica preparada como usuário de setor.
-        </div>
+        <x-input
+            label="Código do setor"
+            name="registration_code"
+            placeholder="Ex.: SEDUC-ABC12345"
+            wire:model="registrationCode"
+            :error="$errors->first('registrationCode')"
+        />
 
         <x-input
             label="Senha"
@@ -50,7 +54,7 @@
         </x-button>
     </form>
 
-    <div class="mt-6 text-center text-sm text-slate-500">
+    <div class="mt-5 text-center text-sm text-slate-500">
         Já tem conta?
         <a href="{{ route('login') }}" wire:navigate class="font-semibold text-seduc-primary hover:text-seduc-primary-hover">Entrar</a>
     </div>

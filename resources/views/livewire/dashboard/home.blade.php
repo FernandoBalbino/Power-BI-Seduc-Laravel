@@ -47,7 +47,7 @@
                 </div>
                 <div>
                     <p class="text-sm font-semibold text-slate-600">Setor vinculado</p>
-                    <p class="mt-1 text-xl font-bold text-slate-950">{{ auth()->user()->sector_id ? 'Sim' : 'Pendente' }}</p>
+                    <p class="mt-1 text-xl font-bold text-slate-950">{{ auth()->user()->sector?->name ?? 'Pendente' }}</p>
                 </div>
             </div>
         </x-card>
@@ -73,7 +73,7 @@
                 <tbody class="divide-y divide-slate-100 text-sm text-slate-600">
                     <tr class="h-12 hover:bg-slate-50">
                         <td class="px-4 py-3 font-semibold text-slate-900">Setores</td>
-                        <td class="px-4 py-3"><x-badge variant="warning">Etapa 2</x-badge></td>
+                        <td class="px-4 py-3"><x-badge variant="success">Pronto</x-badge></td>
                         <td class="px-4 py-3">Cadastrar setores e gerar códigos de acesso.</td>
                     </tr>
                     <tr class="h-12 hover:bg-slate-50">

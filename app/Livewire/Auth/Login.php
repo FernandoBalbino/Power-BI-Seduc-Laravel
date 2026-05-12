@@ -17,7 +17,7 @@ class Login extends Component
     public function mount(): void
     {
         if (Auth::check()) {
-            $this->redirectRoute('dashboard', navigate: true);
+            $this->redirectRoute('dashboards.index', navigate: true);
         }
     }
 
@@ -40,7 +40,7 @@ class Login extends Component
 
         session()->regenerate();
 
-        $this->redirectIntended(route('dashboard'), navigate: true);
+        $this->redirectIntended(route('dashboards.index'), navigate: true);
     }
 
     public function render()

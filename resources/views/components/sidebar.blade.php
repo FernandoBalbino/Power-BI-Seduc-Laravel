@@ -8,7 +8,7 @@
 @endphp
 
 <aside class="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-white px-3.5 py-[18px] shadow-[1px_0_0_rgba(226,232,240,0.9)]">
-    <a href="{{ route('dashboard') }}" wire:navigate class="flex h-11 items-center gap-3 px-2 text-slate-950">
+    <a href="{{ route('dashboards.index') }}" wire:navigate class="flex h-11 items-center gap-3 px-2 text-slate-950">
         <x-logo size="sm" />
     </a>
 

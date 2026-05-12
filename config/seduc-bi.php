@@ -9,7 +9,7 @@ return [
     'menu' => [
         [
             'label' => 'Meus Dashboards',
-            'route' => 'dashboard',
+            'route' => 'dashboards.index',
             'active' => ['dashboard', 'dashboards.*'],
             'icon' => 'layout-dashboard',
         ],
