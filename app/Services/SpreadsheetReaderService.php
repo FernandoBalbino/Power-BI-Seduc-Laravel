@@ -38,7 +38,9 @@ class SpreadsheetReaderService
         int $headerRow = 1,
         int $previewRows = 20,
         int $startColumnIndex = 0,
-        ?int $endRow = null
+        ?int $endRow = null,
+        array $ignoredRows = [],
+        array $excludedColumnIndexes = []
     ): array {
         $reader = $this->readerFor($absolutePath);
         $reader->setReadDataOnly(true);
@@ -60,12 +62,17 @@ class SpreadsheetReaderService
             $readLimit = min($readLimit, max(1, $endRow));
         }
 
-        $rows = $this->readRows($worksheet, $readLimit, $startColumnIndex);
-        $possibleHeaderRows = $this->possibleHeaderRows($rows);
+        $ignoredRows = array_values(array_unique(array_map('intval', $ignoredRows)));
+        $excludedColumnIndexes = array_values(array_unique(array_map('intval', $excludedColumnIndexes)));
+
+        $read = $this->readRows($worksheet, $readLimit, $startColumnIndex, $excludedColumnIndexes);
+        $rows = $read['rows'];
+        $columnIndexes = $read['column_indexes'];
+        $possibleHeaderRows = $this->possibleHeaderRows(array_diff_key($rows, array_flip($ignoredRows)));
         $headerRow = max(1, min($headerRow, max(array_keys($rows) ?: [1])));
         $headerValues = $rows[$headerRow] ?? [];
-        $dataRows = $this->previewRows($rows, $headerRow, $previewRows);
-        $columns = $this->columns($headerValues, $dataRows, $startColumnIndex);
+        $dataRows = $this->previewRows($rows, $headerRow, $previewRows, $ignoredRows);
+        $columns = $this->columns($headerValues, $dataRows, $columnIndexes);
 
         $spreadsheet->disconnectWorksheets();
 
@@ -131,16 +138,31 @@ class SpreadsheetReaderService
     }
 
     /**
-     * @return array<int, array<int, string>>
+     * @return array{rows: array<int, array<int, string>>, column_indexes: array<int, int>}
      */
-    private function readRows(Worksheet $worksheet, int $limit, int $startColumnIndex): array
+    private function readRows(Worksheet $worksheet, int $limit, int $startColumnIndex, array $excludedColumnIndexes): array
     {
         $highestDataRow = min($worksheet->getHighestDataRow(), $limit);
         $highestDataColumn = $worksheet->getHighestDataColumn();
         $highestDataColumnIndex = Coordinate::columnIndexFromString($highestDataColumn);
 
         if ($highestDataRow < 1 || $startColumnIndex + 1 > $highestDataColumnIndex) {
-            return [];
+            return ['rows' => [], 'column_indexes' => []];
+        }
+
+        $excludedColumnIndexes = array_flip($excludedColumnIndexes);
+        $columnIndexes = [];
+
+        for ($columnIndex = $startColumnIndex; $columnIndex < $highestDataColumnIndex; $columnIndex++) {
+            if (isset($excludedColumnIndexes[$columnIndex])) {
+                continue;
+            }
+
+            $columnIndexes[] = $columnIndex;
+        }
+
+        if ($columnIndexes === []) {
+            return ['rows' => [], 'column_indexes' => []];
         }
 
         $startColumn = Coordinate::stringFromColumnIndex($startColumnIndex + 1);
@@ -150,7 +172,12 @@ class SpreadsheetReaderService
 
         foreach ($rawRows as $index => $row) {
             $rowNumber = $index + 1;
-            $cleanRow = array_map(fn ($value) => $this->sanitizeValue($value), $row);
+            $cleanRow = [];
+
+            foreach ($columnIndexes as $columnIndex) {
+                $relativeIndex = $columnIndex - $startColumnIndex;
+                $cleanRow[] = $this->sanitizeValue($row[$relativeIndex] ?? null);
+            }
 
             if ($this->rowIsEmpty($cleanRow)) {
                 continue;
@@ -159,7 +186,10 @@ class SpreadsheetReaderService
             $rows[$rowNumber] = $cleanRow;
         }
 
-        return $rows;
+        return [
+            'rows' => $rows,
+            'column_indexes' => $columnIndexes,
+        ];
     }
 
     /**
@@ -191,12 +221,13 @@ class SpreadsheetReaderService
      * @param  array<int, array<int, string>>  $rows
      * @return array<int, array{row_number: int, values: array<int, string>}>
      */
-    private function previewRows(array $rows, int $headerRow, int $limit): array
+    private function previewRows(array $rows, int $headerRow, int $limit, array $ignoredRows): array
     {
         $preview = [];
+        $ignoredRows = array_flip($ignoredRows);
 
         foreach ($rows as $rowNumber => $row) {
-            if ($rowNumber <= $headerRow) {
+            if ($rowNumber <= $headerRow || isset($ignoredRows[$rowNumber])) {
                 continue;
             }
 
@@ -216,9 +247,10 @@ class SpreadsheetReaderService
     /**
      * @param  array<int, string>  $headerValues
      * @param  array<int, array{row_number: int, values: array<int, string>}>  $dataRows
+     * @param  array<int, int>  $columnIndexes
      * @return array<int, array{index: int, letter: string, name: string, normalized_name: string, samples: array<int, string>}>
      */
-    private function columns(array $headerValues, array $dataRows, int $startColumnIndex): array
+    private function columns(array $headerValues, array $dataRows, array $columnIndexes): array
     {
         $highestColumnIndex = max(
             count($headerValues),
@@ -248,7 +280,7 @@ class SpreadsheetReaderService
 
             $columns[] = [
                 'index' => $index,
-                'letter' => Coordinate::stringFromColumnIndex($startColumnIndex + $index + 1),
+                'letter' => Coordinate::stringFromColumnIndex(($columnIndexes[$index] ?? $index) + 1),
                 'name' => $name,
                 'normalized_name' => $normalizedName,
                 'samples' => $samples,

@@ -14,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'sheet_name',
     'header_start_cell',
     'data_end_cell',
+    'ignored_rows',
+    'excluded_columns',
     'status',
     'imported_at',
 ])]
@@ -32,6 +34,8 @@ class DashboardImport extends Model
     protected function casts(): array
     {
         return [
+            'ignored_rows' => 'array',
+            'excluded_columns' => 'array',
             'status' => DashboardImportStatus::class,
             'imported_at' => 'datetime',
         ];

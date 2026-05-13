@@ -9,6 +9,7 @@ use App\Livewire\Auth\Register;
 use App\Livewire\Dashboards\Create as DashboardCreate;
 use App\Livewire\Dashboards\ImportWizard;
 use App\Models\Dashboard;
+use App\Models\DashboardImport;
 use App\Models\Sector;
 use App\Models\User;
 use App\Services\SpreadsheetReaderService;
@@ -323,6 +324,46 @@ class ExampleTest extends TestCase
             ->assertHasErrors(['dataEndCell']);
     }
 
+    public function test_import_wizard_ignores_rows_and_columns_before_preview(): void
+    {
+        Storage::fake('local');
+
+        $sector = Sector::factory()->create();
+        $user = User::factory()->create(['sector_id' => $sector->id]);
+        $dashboard = Dashboard::factory()->create([
+            'sector_id' => $sector->id,
+            'user_id' => $user->id,
+        ]);
+
+        $this->actingAs($user);
+
+        $component = Livewire::test(ImportWizard::class, ['dashboard' => $dashboard])
+            ->set('headerStartCell', 'A2')
+            ->set('ignoredRowsInput', '3')
+            ->set('excludedColumnsInput', 'D')
+            ->set('file', UploadedFile::fake()->createWithContent(
+                'creches.csv',
+                "\n#,MUNICIPIO,ORDEM DE SERVIÇO,CONTRATO,STATUS\nDBN - DEBONI SISTEMAS CONSTRUTIVOS LTDA,,,,\n1,Santana do Ipanema,12/11/2025,Nº 06/2025,NÃO INICIADA\n2,Pão de Açúcar,12/11/2025,Nº 06/2025,EM ANDAMENTO\n"
+            ))
+            ->call('uploadFile')
+            ->assertSet('ignoredRows', [3])
+            ->assertSet('excludedColumns', ['D'])
+            ->assertSee('Santana do Ipanema')
+            ->assertDontSee('DBN - DEBONI')
+            ->assertDontSee('CONTRATO')
+            ->assertDontSee('Nº 06/2025');
+
+        $columns = $component->get('columns');
+
+        $this->assertSame(['A', 'B', 'C', 'E'], array_column($columns, 'letter'));
+        $this->assertNotContains('CONTRATO', array_column($columns, 'name'));
+
+        $import = DashboardImport::query()->where('original_filename', 'creches.csv')->firstOrFail();
+
+        $this->assertSame([3], $import->ignored_rows);
+        $this->assertSame(['D'], $import->excluded_columns);
+    }
+
     public function test_spreadsheet_reader_reads_xlsx_sheets_columns_and_preview(): void
     {
         $path = storage_path('framework/testing/import-wizard-sample.xlsx');
@@ -392,10 +433,12 @@ class ExampleTest extends TestCase
 
         try {
             $preview = app(SpreadsheetReaderService::class)
-                ->preview($path, 'Processos', 2, 10, 1, 3);
+                ->preview($path, 'Processos', 2, 10, 1, 3, [], [2]);
 
             $this->assertSame('EMPRESA', $preview['columns'][0]['name']);
             $this->assertSame('B', $preview['columns'][0]['letter']);
+            $this->assertSame('VALOR', $preview['columns'][1]['name']);
+            $this->assertSame('D', $preview['columns'][1]['letter']);
             $this->assertSame('Empresa A', $preview['rows'][0]['values'][0]);
             $this->assertCount(1, $preview['rows']);
         } finally {

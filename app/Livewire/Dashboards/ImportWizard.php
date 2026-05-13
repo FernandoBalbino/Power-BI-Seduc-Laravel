@@ -41,6 +41,16 @@ class ImportWizard extends Component
 
     public ?int $dataEndRow = null;
 
+    public ?string $ignoredRowsInput = null;
+
+    public array $ignoredRows = [];
+
+    public ?string $excludedColumnsInput = null;
+
+    public array $excludedColumns = [];
+
+    public array $excludedColumnIndexes = [];
+
     public array $sheets = [];
 
     public array $possibleHeaderRows = [];
@@ -69,10 +79,14 @@ class ImportWizard extends Component
         $this->validateUpload();
         $this->syncHeaderStartFromCell();
         $this->syncDataEndFromCell();
+        $this->syncIgnoredRowsFromInput();
+        $this->syncExcludedColumnsFromInput();
 
         $this->resetImportState();
         $this->syncHeaderStartFromCell();
         $this->syncDataEndFromCell();
+        $this->syncIgnoredRowsFromInput();
+        $this->syncExcludedColumnsFromInput();
 
         $extension = Str::lower($this->file->getClientOriginalExtension());
         $originalFilename = $this->file->getClientOriginalName();
@@ -86,6 +100,8 @@ class ImportWizard extends Component
             'file_path' => $filePath,
             'header_start_cell' => $this->headerStartCell,
             'data_end_cell' => $this->dataEndCell,
+            'ignored_rows' => $this->ignoredRows,
+            'excluded_columns' => $this->excludedColumns,
             'status' => DashboardImportStatus::Uploaded,
         ]);
 
@@ -124,6 +140,8 @@ class ImportWizard extends Component
         $reader ??= app(SpreadsheetReaderService::class);
         $this->syncHeaderStartFromCell();
         $this->syncDataEndFromCell();
+        $this->syncIgnoredRowsFromInput();
+        $this->syncExcludedColumnsFromInput();
 
         $analysis = $reader->preview(
             Storage::disk('local')->path($import->file_path),
@@ -131,7 +149,9 @@ class ImportWizard extends Component
             $this->headerRow,
             (int) config('seduc-bi.imports.preview_rows', 20),
             $this->headerStartColumnIndex,
-            $this->dataEndRow
+            $this->dataEndRow,
+            $this->ignoredRows,
+            $this->excludedColumnIndexes
         );
 
         $this->selectedSheet = $analysis['sheet_name'];
@@ -148,6 +168,8 @@ class ImportWizard extends Component
             'sheet_name' => $this->selectedSheet,
             'header_start_cell' => $this->headerStartCell,
             'data_end_cell' => $this->dataEndCell,
+            'ignored_rows' => $this->ignoredRows,
+            'excluded_columns' => $this->excludedColumns,
             'status' => DashboardImportStatus::Mapped,
         ]);
 
@@ -200,6 +222,8 @@ class ImportWizard extends Component
                 'max:8',
                 'regex:/^[A-Za-z]{1,3}[1-9][0-9]{0,4}$/',
             ],
+            'ignoredRowsInput' => ['nullable', 'string', 'max:120'],
+            'excludedColumnsInput' => ['nullable', 'string', 'max:120'],
             'file' => [
                 'required',
                 'file',
@@ -216,6 +240,8 @@ class ImportWizard extends Component
             'headerStartCell.required' => 'Informe onde começam os títulos da planilha.',
             'headerStartCell.regex' => 'Informe uma célula válida, como A1 ou A2.',
             'dataEndCell.regex' => 'Informe uma célula válida, como A18, ou deixe em branco.',
+            'ignoredRowsInput.max' => 'Informe menos linhas para ignorar.',
+            'excludedColumnsInput.max' => 'Informe menos colunas para ignorar.',
             'file.required' => 'Selecione uma planilha para importar.',
             'file.file' => 'Selecione um arquivo válido.',
             'file.max' => 'A planilha deve ter no máximo '.$this->maxUploadMb.' MB.',
@@ -300,5 +326,112 @@ class ImportWizard extends Component
                 'dataEndCell' => 'A linha final precisa ficar depois da linha dos títulos.',
             ]);
         }
+    }
+
+    private function syncIgnoredRowsFromInput(): void
+    {
+        $input = trim((string) $this->ignoredRowsInput);
+
+        if ($input === '') {
+            $this->ignoredRows = [];
+            $this->ignoredRowsInput = null;
+
+            return;
+        }
+
+        $rows = [];
+
+        foreach (preg_split('/[,;]+/', $input) ?: [] as $part) {
+            $part = trim($part);
+
+            if ($part === '') {
+                continue;
+            }
+
+            if (preg_match('/^[1-9][0-9]*$/', $part)) {
+                $rows[] = (int) $part;
+
+                continue;
+            }
+
+            if (preg_match('/^([1-9][0-9]*)\s*-\s*([1-9][0-9]*)$/', $part, $matches)) {
+                $start = (int) $matches[1];
+                $end = (int) $matches[2];
+
+                if ($end < $start) {
+                    [$start, $end] = [$end, $start];
+                }
+
+                $rows = array_merge($rows, range($start, $end));
+
+                continue;
+            }
+
+            throw ValidationException::withMessages([
+                'ignoredRowsInput' => 'Informe linhas válidas, como 3, 19 ou 3-5.',
+            ]);
+        }
+
+        $rows = array_values(array_unique($rows));
+        sort($rows);
+
+        $this->ignoredRows = $rows;
+        $this->ignoredRowsInput = implode(', ', $rows);
+    }
+
+    private function syncExcludedColumnsFromInput(): void
+    {
+        $input = Str::upper(trim((string) $this->excludedColumnsInput));
+
+        if ($input === '') {
+            $this->excludedColumns = [];
+            $this->excludedColumnIndexes = [];
+            $this->excludedColumnsInput = null;
+
+            return;
+        }
+
+        $indexes = [];
+
+        foreach (preg_split('/[,;]+/', $input) ?: [] as $part) {
+            $part = trim($part);
+
+            if ($part === '') {
+                continue;
+            }
+
+            if (preg_match('/^[A-Z]{1,3}$/', $part)) {
+                $indexes[] = Coordinate::columnIndexFromString($part) - 1;
+
+                continue;
+            }
+
+            if (preg_match('/^([A-Z]{1,3})\s*[:-]\s*([A-Z]{1,3})$/', $part, $matches)) {
+                $start = Coordinate::columnIndexFromString($matches[1]) - 1;
+                $end = Coordinate::columnIndexFromString($matches[2]) - 1;
+
+                if ($end < $start) {
+                    [$start, $end] = [$end, $start];
+                }
+
+                $indexes = array_merge($indexes, range($start, $end));
+
+                continue;
+            }
+
+            throw ValidationException::withMessages([
+                'excludedColumnsInput' => 'Informe colunas válidas, como K, N ou B:D.',
+            ]);
+        }
+
+        $indexes = array_values(array_unique($indexes));
+        sort($indexes);
+
+        $this->excludedColumnIndexes = $indexes;
+        $this->excludedColumns = array_map(
+            fn (int $index) => Coordinate::stringFromColumnIndex($index + 1),
+            $indexes
+        );
+        $this->excludedColumnsInput = implode(', ', $this->excludedColumns);
     }
 }

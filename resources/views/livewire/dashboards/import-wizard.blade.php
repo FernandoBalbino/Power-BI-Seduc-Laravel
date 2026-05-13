@@ -135,7 +135,7 @@
 
             <div class="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4">
                 <p class="text-[13px] font-semibold leading-5 text-slate-950">Intervalo da planilha</p>
-                <div class="mt-3 grid gap-4 md:grid-cols-2">
+                <div class="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <div class="space-y-2">
                         <label for="headerStartCell" class="block text-xs font-semibold text-slate-600">Títulos começam em</label>
                         <input
@@ -163,10 +163,38 @@
                             <p class="text-xs font-semibold text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
+
+                    <div class="space-y-2">
+                        <label for="ignoredRowsInput" class="block text-xs font-semibold text-slate-600">Linhas para ignorar</label>
+                        <input
+                            id="ignoredRowsInput"
+                            type="text"
+                            wire:model="ignoredRowsInput"
+                            placeholder="Opcional, ex.: 3"
+                            class="h-11 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-sm font-semibold text-slate-950 placeholder:text-slate-400 transition focus:border-seduc-primary focus:outline-none focus:ring-4 focus:ring-blue-100"
+                        >
+                        @error('ignoredRowsInput')
+                            <p class="text-xs font-semibold text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="excludedColumnsInput" class="block text-xs font-semibold text-slate-600">Colunas para ignorar</label>
+                        <input
+                            id="excludedColumnsInput"
+                            type="text"
+                            wire:model="excludedColumnsInput"
+                            placeholder="Opcional, ex.: K, N"
+                            class="h-11 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-sm font-semibold uppercase text-slate-950 placeholder:text-slate-400 transition focus:border-seduc-primary focus:outline-none focus:ring-4 focus:ring-blue-100"
+                        >
+                        @error('excludedColumnsInput')
+                            <p class="text-xs font-semibold text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
                 </div>
 
                 <p class="mt-3 text-sm leading-6 text-slate-600">
-                    Use <span class="font-semibold text-slate-950">A2</span> quando os títulos começarem na segunda linha e <span class="font-semibold text-slate-950">A18</span> para ignorar somas ou observações abaixo dessa linha.
+                    Use <span class="font-semibold text-slate-950">A2</span> quando os títulos começarem na segunda linha, <span class="font-semibold text-slate-950">A18</span> para cortar somas no rodapé, <span class="font-semibold text-slate-950">3</span> para ignorar uma linha de observação e <span class="font-semibold text-slate-950">K, N</span> para remover colunas vazias ou auxiliares.
                 </p>
             </div>
         </x-card>
@@ -227,6 +255,34 @@
                                 class="h-11 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-sm font-semibold uppercase text-slate-950 placeholder:text-slate-400 transition focus:border-seduc-primary focus:outline-none focus:ring-4 focus:ring-blue-100"
                             >
                             @error('dataEndCell')
+                                <p class="text-xs font-semibold text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="ignoredRowsInputPreview" class="block text-[13px] font-semibold leading-5 text-slate-950">Linhas ignoradas</label>
+                            <input
+                                id="ignoredRowsInputPreview"
+                                type="text"
+                                wire:model="ignoredRowsInput"
+                                placeholder="Opcional"
+                                class="h-11 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-sm font-semibold text-slate-950 placeholder:text-slate-400 transition focus:border-seduc-primary focus:outline-none focus:ring-4 focus:ring-blue-100"
+                            >
+                            @error('ignoredRowsInput')
+                                <p class="text-xs font-semibold text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="excludedColumnsInputPreview" class="block text-[13px] font-semibold leading-5 text-slate-950">Colunas ignoradas</label>
+                            <input
+                                id="excludedColumnsInputPreview"
+                                type="text"
+                                wire:model="excludedColumnsInput"
+                                placeholder="Opcional"
+                                class="h-11 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-sm font-semibold uppercase text-slate-950 placeholder:text-slate-400 transition focus:border-seduc-primary focus:outline-none focus:ring-4 focus:ring-blue-100"
+                            >
+                            @error('excludedColumnsInput')
                                 <p class="text-xs font-semibold text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
@@ -324,6 +380,17 @@
                     <p class="mt-1 text-sm leading-6 text-slate-600">
                         Mostrando até {{ config('seduc-bi.imports.preview_rows', 20) }} linhas para conferência{{ $dataEndCell ? ', limitadas até '.$dataEndCell : '' }}. Os dados finais ainda não foram salvos.
                     </p>
+
+                    @if ($ignoredRows || $excludedColumns)
+                        <p class="mt-2 text-xs font-semibold text-slate-500">
+                            @if ($ignoredRows)
+                                Linhas ignoradas: {{ implode(', ', $ignoredRows) }}.
+                            @endif
+                            @if ($excludedColumns)
+                                Colunas ignoradas: {{ implode(', ', $excludedColumns) }}.
+                            @endif
+                        </p>
+                    @endif
                 </div>
 
                 <x-badge variant="info">{{ count($previewRows) }} linhas</x-badge>
