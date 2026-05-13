@@ -8,6 +8,7 @@ use App\Livewire\Admin\Sectors\Create as SectorCreate;
 use App\Livewire\Auth\Register;
 use App\Livewire\Dashboards\Create as DashboardCreate;
 use App\Livewire\Dashboards\ImportWizard;
+use App\Livewire\Dashboards\Index as DashboardIndex;
 use App\Models\Dashboard;
 use App\Models\DashboardImport;
 use App\Models\Sector;
@@ -194,6 +195,52 @@ class ExampleTest extends TestCase
         $this->actingAs($user)
             ->get(route('dashboards.show', $dashboard))
             ->assertForbidden();
+    }
+
+    public function test_admin_sees_sector_cards_before_dashboard_cards(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $sector = Sector::factory()->create(['name' => 'SUENG']);
+        $otherSector = Sector::factory()->create(['name' => 'SUPED']);
+        $readyOnlySector = Sector::factory()->create(['name' => 'SEMED']);
+        $sectorUser = User::factory()->create(['sector_id' => $sector->id]);
+        $otherUser = User::factory()->create(['sector_id' => $otherSector->id]);
+        $readyUser = User::factory()->create(['sector_id' => $readyOnlySector->id]);
+
+        Dashboard::factory()->create([
+            'sector_id' => $sector->id,
+            'user_id' => $sectorUser->id,
+            'name' => 'Obras SUENG',
+            'status' => 'draft',
+        ]);
+
+        Dashboard::factory()->create([
+            'sector_id' => $otherSector->id,
+            'user_id' => $otherUser->id,
+            'name' => 'Indicadores SUPED',
+            'status' => 'draft',
+        ]);
+
+        Dashboard::factory()->create([
+            'sector_id' => $readyOnlySector->id,
+            'user_id' => $readyUser->id,
+            'name' => 'Painel Pronto SEMED',
+            'status' => 'ready',
+        ]);
+
+        $this->actingAs($admin);
+
+        Livewire::test(DashboardIndex::class)
+            ->assertSee('Setores com dashboards em rascunho')
+            ->assertSee('SUENG')
+            ->assertSee('SUPED')
+            ->assertDontSee('SEMED')
+            ->assertDontSee('Obras SUENG')
+            ->call('selectSector', $sector->id)
+            ->assertSet('selectedSectorId', $sector->id)
+            ->assertSee('Dashboards de SUENG')
+            ->assertSee('Obras SUENG')
+            ->assertDontSee('Indicadores SUPED');
     }
 
     public function test_import_wizard_reads_csv_preview(): void

@@ -9,13 +9,36 @@
         <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
                 <x-badge variant="info">Meus Dashboards</x-badge>
-                <h2 class="mt-4 text-2xl font-bold text-slate-950">Dashboards do setor</h2>
+                <h2 class="mt-4 text-2xl font-bold text-slate-950">
+                    @if ($isAdmin && ! $selectedSector)
+                        Setores com dashboards em rascunho
+                    @elseif ($isAdmin && $selectedSector)
+                        Dashboards de {{ $selectedSector->name }}
+                    @else
+                        Dashboards do setor
+                    @endif
+                </h2>
                 <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-                    Crie painéis para organizar indicadores, importar planilhas e acompanhar informações importantes do seu setor.
+                    @if ($isAdmin && ! $selectedSector)
+                        Escolha um setor para visualizar os dashboards em rascunho sem misturar todos os cards na mesma tela.
+                    @elseif ($isAdmin && $selectedSector)
+                        Acompanhe os dashboards deste setor e continue a importação quando necessário.
+                    @else
+                        Crie painéis para organizar indicadores, importar planilhas e acompanhar informações importantes do seu setor.
+                    @endif
                 </p>
             </div>
 
-            @if ($canCreate)
+            @if ($isAdmin && $selectedSector)
+                <button
+                    type="button"
+                    wire:click="clearSectorSelection"
+                    class="inline-flex h-11 items-center justify-center gap-2 rounded-[10px] border border-slate-200 bg-white px-[18px] text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                    <x-icon name="arrow-left" class="h-5 w-5" />
+                    Voltar para setores
+                </button>
+            @elseif ($canCreate)
                 <a
                     href="{{ route('dashboards.create') }}"
                     wire:navigate
@@ -28,7 +51,7 @@
         </div>
     </x-card>
 
-    @unless ($canCreate)
+    @if (! $isAdmin && ! $canCreate)
         <x-card>
             <div class="flex items-start gap-4">
                 <div class="flex h-12 w-12 items-center justify-center rounded-[14px] bg-amber-100 text-amber-700">
@@ -42,12 +65,12 @@
                 </div>
             </div>
         </x-card>
-    @endunless
+    @endif
 
     <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
         <x-card>
-            <p class="text-sm font-semibold text-slate-600">Total de dashboards</p>
-            <p class="mt-2 text-2xl font-bold text-slate-950">{{ $summary['total'] }}</p>
+            <p class="text-sm font-semibold text-slate-600">{{ $isAdmin && ! $selectedSector ? 'Setores com rascunho' : 'Total de dashboards' }}</p>
+            <p class="mt-2 text-2xl font-bold text-slate-950">{{ $isAdmin && ! $selectedSector ? $sectorCards->count() : $summary['total'] }}</p>
         </x-card>
 
         <x-card>
@@ -66,7 +89,69 @@
         </x-card>
     </div>
 
-    @if ($dashboards->isEmpty())
+    @if ($isAdmin && ! $selectedSector)
+        @if ($sectorCards->isEmpty())
+            <x-card>
+                <div class="flex flex-col items-center py-10 text-center">
+                    <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-seduc-primary-soft text-seduc-primary">
+                        <x-icon name="building-2" class="h-8 w-8" />
+                    </div>
+                    <h3 class="mt-5 text-xl font-bold text-slate-950">Nenhum setor com dashboard em rascunho</h3>
+                    <p class="mt-2 max-w-xl text-sm leading-6 text-slate-600">
+                        Quando algum setor tiver dashboards pendentes, ele aparecerá aqui como um card clicável.
+                    </p>
+                </div>
+            </x-card>
+        @else
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                @foreach ($sectorCards as $sector)
+                    <button
+                        type="button"
+                        wire:click="selectSector({{ $sector->id }})"
+                        wire:key="sector-card-{{ $sector->id }}"
+                        class="rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-seduc-card transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-seduc-card-hover focus:outline-none focus:ring-4 focus:ring-blue-100"
+                    >
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <x-badge variant="warning">{{ $sector->draft_dashboards_count }} rascunhos</x-badge>
+                                <h3 class="mt-3 text-xl font-bold text-slate-950">{{ $sector->name }}</h3>
+                                <p class="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">
+                                    {{ $sector->description ?: 'Sem descrição informada.' }}
+                                </p>
+                            </div>
+
+                            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-seduc-primary-soft text-seduc-primary">
+                                <x-icon name="building-2" class="h-6 w-6" />
+                            </div>
+                        </div>
+
+                        <div class="mt-5 grid grid-cols-3 gap-3 rounded-2xl bg-slate-50 p-4 text-sm">
+                            <div>
+                                <p class="text-xs font-semibold text-slate-500">Total</p>
+                                <p class="mt-1 font-bold text-slate-950">{{ $sector->dashboards_count }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold text-slate-500">Prontos</p>
+                                <p class="mt-1 font-bold text-green-700">{{ $sector->ready_dashboards_count }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold text-slate-500">Usuários</p>
+                                <p class="mt-1 font-bold text-slate-950">{{ $sector->users_count }}</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex items-center justify-between text-sm">
+                            <span class="font-semibold text-slate-500">
+                                Atualizado em
+                                {{ $sector->dashboards_max_updated_at ? \Illuminate\Support\Carbon::parse($sector->dashboards_max_updated_at)->format('d/m/Y H:i') : 'sem data' }}
+                            </span>
+                            <span class="font-bold text-seduc-primary">Ver dashboards</span>
+                        </div>
+                    </button>
+                @endforeach
+            </div>
+        @endif
+    @elseif ($dashboards->isEmpty())
         <x-card>
             <div class="flex flex-col items-center py-10 text-center">
                 <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-seduc-primary-soft text-seduc-primary">
@@ -90,6 +175,12 @@
             </div>
         </x-card>
     @else
+        @if ($isAdmin && $selectedSector)
+            <div class="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-semibold text-seduc-primary">
+                Exibindo {{ $dashboards->count() }} dashboard(s) do setor {{ $selectedSector->name }}.
+            </div>
+        @endif
+
         <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
             @foreach ($dashboards as $dashboard)
                 <x-card wire:key="dashboard-{{ $dashboard->id }}">
