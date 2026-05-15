@@ -166,30 +166,46 @@
                     </div>
                 </div>
 
-                <div class="space-y-2">
-                    <label for="manualGroupingColumnId" class="block text-[13px] font-semibold leading-5 text-slate-950">Coluna de agrupamento</label>
-                    <select id="manualGroupingColumnId" wire:model="manualGroupingColumnId" class="h-11 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-sm text-slate-950 transition focus:border-seduc-primary focus:outline-none focus:ring-4 focus:ring-blue-100">
-                        <option value="">Sem agrupamento</option>
-                        @foreach ($groupingColumns as $column)
-                            <option value="{{ $column->id }}">{{ $column->displayName() }} - {{ $column->type->label() }}</option>
-                        @endforeach
-                    </select>
-                    @error('manualGroupingColumnId')
-                        <p class="text-xs font-semibold text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
+                @if (! $this->isCardWidget)
+                    <div class="space-y-2">
+                        <label for="manualGroupingColumnId" class="block text-[13px] font-semibold leading-5 text-slate-950">Coluna de agrupamento</label>
+                        <select id="manualGroupingColumnId" wire:model="manualGroupingColumnId" class="h-11 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-sm text-slate-950 transition focus:border-seduc-primary focus:outline-none focus:ring-4 focus:ring-blue-100">
+                            <option value="">Sem agrupamento</option>
+                            @foreach ($groupingColumns as $column)
+                                <option value="{{ $column->id }}">{{ $column->displayName() }} - {{ $column->type->label() }}</option>
+                            @endforeach
+                        </select>
+                        @error('manualGroupingColumnId')
+                            <p class="text-xs font-semibold text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                @else
+                    <div class="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                        <p class="text-sm font-semibold text-slate-950">Total geral</p>
+                        <p class="mt-1 text-sm leading-6 text-slate-600">Cards de resumo mostram um único número do dashboard inteiro.</p>
+                    </div>
+                @endif
 
                 <div class="space-y-2">
-                    <label for="manualValueColumnId" class="block text-[13px] font-semibold leading-5 text-slate-950">Coluna de valor</label>
-                    <select id="manualValueColumnId" wire:model="manualValueColumnId" class="h-11 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-sm text-slate-950 transition focus:border-seduc-primary focus:outline-none focus:ring-4 focus:ring-blue-100">
-                        <option value="">Quantidade de registros</option>
-                        @foreach ($valueColumns as $column)
-                            <option value="{{ $column->id }}">{{ $column->displayName() }} - {{ $column->type->label() }}</option>
-                        @endforeach
-                    </select>
-                    @error('manualValueColumnId')
-                        <p class="text-xs font-semibold text-red-600">{{ $message }}</p>
-                    @enderror
+                    @if ($this->usesRecordCount)
+                        <span class="block text-[13px] font-semibold leading-5 text-slate-950">O que será contado</span>
+                        <div class="flex min-h-11 items-center rounded-[10px] border border-slate-200 bg-slate-50 px-3.5 text-sm font-semibold text-slate-700">
+                            Quantidade de registros
+                        </div>
+                        <p class="text-xs font-semibold text-slate-500">Cada linha importada entra uma vez na contagem.</p>
+                    @else
+                        <label for="manualValueColumnId" class="block text-[13px] font-semibold leading-5 text-slate-950">Coluna de valor</label>
+                        <select id="manualValueColumnId" wire:model="manualValueColumnId" class="h-11 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-sm text-slate-950 transition focus:border-seduc-primary focus:outline-none focus:ring-4 focus:ring-blue-100">
+                            @forelse ($valueColumns as $column)
+                                <option value="{{ $column->id }}">{{ $column->displayName() }} - {{ $column->type->label() }}</option>
+                            @empty
+                                <option value="">Nenhuma coluna numérica disponível</option>
+                            @endforelse
+                        </select>
+                        @error('manualValueColumnId')
+                            <p class="text-xs font-semibold text-red-600">{{ $message }}</p>
+                        @enderror
+                    @endif
                 </div>
 
                 <div class="grid gap-4 sm:grid-cols-2">

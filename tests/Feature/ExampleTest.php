@@ -846,6 +846,11 @@ class ExampleTest extends TestCase
         $this->assertLessThanOrEqual(8, count($widgets));
         $this->assertDatabaseHas('dashboard_widgets', [
             'dashboard_id' => $context['dashboard']->id,
+            'chart_type' => DashboardWidgetChartType::Card->value,
+            'title' => 'Total de registros',
+        ]);
+        $this->assertDatabaseHas('dashboard_widgets', [
+            'dashboard_id' => $context['dashboard']->id,
             'chart_type' => DashboardWidgetChartType::Bar->value,
             'title' => 'Valor Pago por Município',
         ]);
@@ -882,6 +887,37 @@ class ExampleTest extends TestCase
             'title' => 'Valor por Município',
             'chart_type' => DashboardWidgetChartType::Bar->value,
         ]);
+    }
+
+    public function test_dashboard_edit_component_creates_total_count_card(): void
+    {
+        $context = $this->createDashboardWithRelationshipColumns();
+
+        $this->actingAs($context['user']);
+
+        Livewire::test(DashboardEdit::class, ['dashboard' => $context['dashboard']])
+            ->set('manualTitle', 'Quantidade de obras')
+            ->set('manualChartType', DashboardWidgetChartType::Card->value)
+            ->set('manualAggregation', DashboardRelationshipAggregation::Count->value)
+            ->set('manualGroupingColumnId', $context['columns']['municipio']->id)
+            ->set('manualValueColumnId', null)
+            ->call('saveManualWidget')
+            ->assertSee('Widget criado com sucesso.');
+
+        $widget = DashboardWidget::query()
+            ->where('dashboard_id', $context['dashboard']->id)
+            ->where('title', 'Quantidade de obras')
+            ->firstOrFail();
+
+        $this->assertSame(DashboardWidgetChartType::Card, $widget->chart_type);
+        $this->assertNull($widget->config_json['base_column_id']);
+        $this->assertNull($widget->config_json['value_column_id']);
+        $this->assertSame(DashboardRelationshipAggregation::Count->value, $widget->config_json['aggregation']);
+
+        $data = app(DashboardQueryService::class)->dataForWidget($widget);
+
+        $this->assertSame(3, $data['value']);
+        $this->assertSame('Quantidade de registros', $data['label']);
     }
 
     public function test_dashboard_show_renders_saved_widget(): void

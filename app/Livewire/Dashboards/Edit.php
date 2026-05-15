@@ -37,7 +37,21 @@ class Edit extends Component
         $this->dashboard = $dashboard->load(['sector', 'user', 'columns', 'widgets']);
         $this->manualGroupingColumnId = $this->dashboard->dimensionalColumns()->first()?->id;
         $this->manualValueColumnId = $this->dashboard->metricColumns()->first()?->id;
+        $this->manualAggregation = $this->manualValueColumnId
+            ? DashboardRelationshipAggregation::Sum->value
+            : DashboardRelationshipAggregation::Count->value;
         $this->manualTitle = 'Novo gráfico';
+    }
+
+    public function updatedManualAggregation(string $aggregation): void
+    {
+        if ($aggregation === DashboardRelationshipAggregation::Count->value) {
+            $this->manualValueColumnId = null;
+
+            return;
+        }
+
+        $this->manualValueColumnId ??= $this->dashboard->metricColumns()->first()?->id;
     }
 
     public function generateAutomaticWidgets(): void
@@ -56,6 +70,12 @@ class Edit extends Component
 
     public function saveManualWidget(): void
     {
+        if ($this->manualAggregation !== DashboardRelationshipAggregation::Count->value
+            && ! $this->manualValueColumnId
+            && ! $this->dashboard->metricColumns()->exists()) {
+            $this->manualAggregation = DashboardRelationshipAggregation::Count->value;
+        }
+
         $this->validate([
             'manualTitle' => ['required', 'string', 'max:120'],
             'manualChartType' => ['required', 'in:card,bar,line,pie,donut,area,table'],
@@ -119,6 +139,16 @@ class Edit extends Component
     public function getAggregationOptionsProperty(): array
     {
         return DashboardRelationshipAggregation::options();
+    }
+
+    public function getIsCardWidgetProperty(): bool
+    {
+        return $this->manualChartType === DashboardWidgetChartType::Card->value;
+    }
+
+    public function getUsesRecordCountProperty(): bool
+    {
+        return $this->manualAggregation === DashboardRelationshipAggregation::Count->value;
     }
 
     public function render()

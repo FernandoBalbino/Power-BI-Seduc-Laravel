@@ -29,6 +29,19 @@ class ChartSuggestionService
         $dashboard->loadMissing(['columns', 'validRelationships.baseColumn', 'validRelationships.relatedColumn']);
         $suggestions = [];
 
+        if ($dashboard->rows()->exists()) {
+            $suggestions[] = $this->buildSuggestion(
+                title: 'Total de registros',
+                chartType: DashboardWidgetChartType::Card,
+                baseColumn: null,
+                valueColumn: null,
+                aggregation: DashboardRelationshipAggregation::Count,
+                reason: 'Card de resumo para acompanhar o volume total de linhas importadas.',
+                width: 3,
+                height: 2
+            );
+        }
+
         foreach ($dashboard->columns->filter(fn (DashboardColumn $column) => $column->isMetric())->take(3) as $metricColumn) {
             $aggregation = $metricColumn->type === DashboardColumnType::Percentage
                 ? DashboardRelationshipAggregation::Avg
@@ -161,7 +174,7 @@ class ChartSuggestionService
 
         if ($aggregation !== DashboardRelationshipAggregation::Count && ! $valueColumn) {
             throw ValidationException::withMessages([
-                'manualValueColumnId' => 'Escolha uma coluna de valor para este cálculo.',
+                'manualValueColumnId' => 'Para usar Soma, Média, Mínimo ou Máximo, escolha uma coluna de valor. Para contar linhas, use Contagem.',
             ]);
         }
 
