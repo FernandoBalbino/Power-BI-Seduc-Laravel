@@ -24,27 +24,32 @@ class DashboardQueryService
         $aggregation = DashboardRelationshipAggregation::from($config['aggregation'] ?? DashboardRelationshipAggregation::Count->value);
         $limit = (int) ($config['limit'] ?? 10);
         $sort = (string) ($config['sort'] ?? 'desc');
+        $filters = is_array($config['filters'] ?? null) ? $config['filters'] : [];
 
         return match ($widget->chart_type) {
-            DashboardWidgetChartType::Card => $this->cardData($dashboard, $valueColumn, $aggregation),
-            DashboardWidgetChartType::Table => $this->tableData($dashboard, $baseColumn, $valueColumn, $aggregation, $limit, $sort),
+            DashboardWidgetChartType::Card => $this->cardData($dashboard, $valueColumn, $aggregation, $filters),
+            DashboardWidgetChartType::Table => $this->tableData($dashboard, $baseColumn, $valueColumn, $aggregation, $limit, $sort, $filters),
             DashboardWidgetChartType::Pie,
-            DashboardWidgetChartType::Donut => $this->pieData($dashboard, $baseColumn, $valueColumn, $aggregation, $limit, $sort),
+            DashboardWidgetChartType::Donut => $this->pieData($dashboard, $baseColumn, $valueColumn, $aggregation, $limit, $sort, $filters),
             DashboardWidgetChartType::Bar,
             DashboardWidgetChartType::Line,
-            DashboardWidgetChartType::Area => $this->seriesData($dashboard, $baseColumn, $valueColumn, $aggregation, $limit, $sort),
+            DashboardWidgetChartType::Area => $this->seriesData($dashboard, $baseColumn, $valueColumn, $aggregation, $limit, $sort, $filters),
         };
     }
 
     /**
      * @return array{value: float|int, formatted: string, label: string, aggregation: string}
      */
-    public function cardData(Dashboard $dashboard, ?DashboardColumn $valueColumn, DashboardRelationshipAggregation|string $aggregation): array
-    {
+    public function cardData(
+        Dashboard $dashboard,
+        ?DashboardColumn $valueColumn,
+        DashboardRelationshipAggregation|string $aggregation,
+        array $filters = []
+    ): array {
         $aggregation = $aggregation instanceof DashboardRelationshipAggregation
             ? $aggregation
             : DashboardRelationshipAggregation::from($aggregation);
-        $rows = $this->rows($dashboard);
+        $rows = $this->rows($dashboard, $filters);
         $value = $this->aggregateRows($rows, $valueColumn, $aggregation);
 
         return [
@@ -64,9 +69,10 @@ class DashboardQueryService
         ?DashboardColumn $valueColumn,
         DashboardRelationshipAggregation|string $aggregation,
         int $limit = 10,
-        string $sort = 'desc'
+        string $sort = 'desc',
+        array $filters = []
     ): array {
-        $rows = $this->aggregateBy($dashboard, $baseColumn, $valueColumn, $aggregation, $limit, $sort);
+        $rows = $this->aggregateBy($dashboard, $baseColumn, $valueColumn, $aggregation, $limit, $sort, $filters);
 
         return [
             'categories' => array_column($rows, 'label'),
@@ -87,9 +93,10 @@ class DashboardQueryService
         ?DashboardColumn $valueColumn,
         DashboardRelationshipAggregation|string $aggregation,
         int $limit = 10,
-        string $sort = 'desc'
+        string $sort = 'desc',
+        array $filters = []
     ): array {
-        $rows = $this->aggregateBy($dashboard, $baseColumn, $valueColumn, $aggregation, $limit, $sort);
+        $rows = $this->aggregateBy($dashboard, $baseColumn, $valueColumn, $aggregation, $limit, $sort, $filters);
 
         return [
             'labels' => array_column($rows, 'label'),
@@ -107,11 +114,12 @@ class DashboardQueryService
         ?DashboardColumn $valueColumn,
         DashboardRelationshipAggregation|string $aggregation,
         int $limit = 10,
-        string $sort = 'desc'
+        string $sort = 'desc',
+        array $filters = []
     ): array {
         return [
             'headers' => [$baseColumn?->displayName() ?? 'Grupo', $valueColumn?->displayName() ?? 'Quantidade'],
-            'rows' => $this->aggregateBy($dashboard, $baseColumn, $valueColumn, $aggregation, $limit, $sort),
+            'rows' => $this->aggregateBy($dashboard, $baseColumn, $valueColumn, $aggregation, $limit, $sort, $filters),
         ];
     }
 
@@ -124,12 +132,13 @@ class DashboardQueryService
         ?DashboardColumn $valueColumn,
         DashboardRelationshipAggregation|string $aggregation,
         int $limit = 10,
-        string $sort = 'desc'
+        string $sort = 'desc',
+        array $filters = []
     ): array {
         $aggregation = $aggregation instanceof DashboardRelationshipAggregation
             ? $aggregation
             : DashboardRelationshipAggregation::from($aggregation);
-        $rows = $this->rows($dashboard);
+        $rows = $this->rows($dashboard, $filters);
 
         if (! $baseColumn) {
             $value = $this->aggregateRows($rows, $valueColumn, $aggregation);
@@ -210,11 +219,46 @@ class DashboardQueryService
     /**
      * @return Collection<int, array<string, mixed>>
      */
-    private function rows(Dashboard $dashboard): Collection
+    private function rows(Dashboard $dashboard, array $filters = []): Collection
     {
-        return $dashboard->rows()
+        $columns = $dashboard->columns()
+            ->get()
+            ->keyBy('id');
+
+        $rows = $dashboard->rows()
             ->get()
             ->map(fn ($row) => $row->data_json ?? []);
+
+        return $this->applyFilters($rows, $columns, $filters);
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $rows
+     * @param  Collection<int, DashboardColumn>  $columns
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function applyFilters(Collection $rows, Collection $columns, array $filters): Collection
+    {
+        foreach ($filters as $filter) {
+            if (! is_array($filter)) {
+                continue;
+            }
+
+            $column = $columns->get((int) ($filter['column_id'] ?? 0));
+            $expected = $filter['value'] ?? null;
+
+            if (! $column || $expected === null || $expected === '') {
+                continue;
+            }
+
+            $rows = $rows->filter(function (array $row) use ($column, $expected): bool {
+                $value = $row[$column->normalized_name] ?? null;
+
+                return $this->comparableValue($value) === $this->comparableValue($expected);
+            });
+        }
+
+        return $rows->values();
     }
 
     private function columnFromConfig(Dashboard $dashboard, mixed $columnId): ?DashboardColumn
@@ -238,5 +282,18 @@ class DashboardQueryService
         }
 
         return (string) $value;
+    }
+
+    private function comparableValue(mixed $value): string
+    {
+        if (is_bool($value)) {
+            return $value ? 'sim' : 'nao';
+        }
+
+        return str((string) $value)
+            ->squish()
+            ->ascii()
+            ->lower()
+            ->toString();
     }
 }

@@ -920,6 +920,37 @@ class ExampleTest extends TestCase
         $this->assertSame('Quantidade de registros', $data['label']);
     }
 
+    public function test_dashboard_edit_component_creates_filtered_count_card(): void
+    {
+        $context = $this->createDashboardWithRelationshipColumns();
+
+        $this->actingAs($context['user']);
+
+        Livewire::test(DashboardEdit::class, ['dashboard' => $context['dashboard']])
+            ->set('manualTitle', 'Obras em andamento')
+            ->set('manualChartType', DashboardWidgetChartType::Card->value)
+            ->set('manualAggregation', DashboardRelationshipAggregation::Count->value)
+            ->set('manualFilterColumnId', $context['columns']['status']->id)
+            ->set('manualFilterValue', 'Em andamento')
+            ->call('saveManualWidget')
+            ->assertSee('Widget criado com sucesso.');
+
+        $widget = DashboardWidget::query()
+            ->where('dashboard_id', $context['dashboard']->id)
+            ->where('title', 'Obras em andamento')
+            ->firstOrFail();
+
+        $this->assertSame([[
+            'column_id' => $context['columns']['status']->id,
+            'operator' => 'equals',
+            'value' => 'Em andamento',
+        ]], $widget->config_json['filters']);
+
+        $data = app(DashboardQueryService::class)->dataForWidget($widget);
+
+        $this->assertSame(1, $data['value']);
+    }
+
     public function test_dashboard_show_renders_saved_widget(): void
     {
         $context = $this->createDashboardWithRelationshipColumns();

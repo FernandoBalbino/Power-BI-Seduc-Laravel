@@ -182,7 +182,7 @@
                 @else
                     <div class="rounded-2xl border border-blue-100 bg-blue-50 p-4">
                         <p class="text-sm font-semibold text-slate-950">Total geral</p>
-                        <p class="mt-1 text-sm leading-6 text-slate-600">Cards de resumo mostram um único número do dashboard inteiro.</p>
+                        <p class="mt-1 text-sm leading-6 text-slate-600">Cards de resumo mostram um único número. Sem filtro, usam o dashboard inteiro.</p>
                     </div>
                 @endif
 
@@ -233,9 +233,41 @@
                     </div>
                 </div>
 
-                <div class="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-slate-600">
-                    <p class="font-semibold text-slate-950">Filtros opcionais</p>
-                    <p class="mt-1">A estrutura já fica preparada no widget, mas a escolha de filtros será habilitada em uma próxima etapa.</p>
+                <div class="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                    <p class="text-sm font-semibold text-slate-950">Filtro opcional</p>
+                    <p class="mt-1 text-sm leading-6 text-slate-600">
+                        Use quando quiser contar ou somar apenas uma parte dos dados, como Status = Em andamento.
+                    </p>
+
+                    <div class="mt-4 space-y-3">
+                        <div class="space-y-2">
+                            <label for="manualFilterColumnId" class="block text-[13px] font-semibold leading-5 text-slate-950">Filtrar por</label>
+                            <select id="manualFilterColumnId" wire:model.live="manualFilterColumnId" class="h-11 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-sm text-slate-950 transition focus:border-seduc-primary focus:outline-none focus:ring-4 focus:ring-blue-100">
+                                <option value="">Sem filtro</option>
+                                @foreach ($columns as $column)
+                                    <option value="{{ $column->id }}">{{ $column->displayName() }} - {{ $column->type->label() }}</option>
+                                @endforeach
+                            </select>
+                            @error('manualFilterColumnId')
+                                <p class="text-xs font-semibold text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        @if ($manualFilterColumnId)
+                            <div class="space-y-2">
+                                <label for="manualFilterValue" class="block text-[13px] font-semibold leading-5 text-slate-950">Valor do filtro</label>
+                                <select id="manualFilterValue" wire:model="manualFilterValue" class="h-11 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-sm text-slate-950 transition focus:border-seduc-primary focus:outline-none focus:ring-4 focus:ring-blue-100">
+                                    <option value="">Escolha um valor</option>
+                                    @foreach ($this->manualFilterValues as $filterValue)
+                                        <option value="{{ $filterValue }}">{{ $filterValue }}</option>
+                                    @endforeach
+                                </select>
+                                @error('manualFilterValue')
+                                    <p class="text-xs font-semibold text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        @endif
+                    </div>
                 </div>
 
                 <x-button type="button" wire:click="saveManualWidget" class="w-full">

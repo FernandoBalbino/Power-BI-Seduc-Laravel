@@ -190,6 +190,18 @@ class ChartSuggestionService
                 'manualAggregation' => 'Soma e média precisam de Número, Dinheiro ou Porcentagem.',
             ]);
         }
+
+        foreach (($config['filters'] ?? []) as $filter) {
+            if (! is_array($filter)) {
+                continue;
+            }
+
+            if (! $this->column($dashboard, $filter['column_id'] ?? null)) {
+                throw ValidationException::withMessages([
+                    'manualFilterColumnId' => 'Escolha uma coluna válida para o filtro.',
+                ]);
+            }
+        }
     }
 
     private function chartTypeForRelationship(DashboardRelationship $relationship): ?DashboardWidgetChartType

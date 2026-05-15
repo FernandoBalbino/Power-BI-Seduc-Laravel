@@ -5,6 +5,7 @@ namespace App\Livewire\Dashboards;
 use App\Enums\DashboardRelationshipAggregation;
 use App\Enums\DashboardWidgetChartType;
 use App\Models\Dashboard;
+use App\Models\DashboardColumn;
 use App\Models\DashboardWidget;
 use App\Services\ChartSuggestionService;
 use App\Services\DashboardQueryService;
@@ -30,6 +31,10 @@ class Edit extends Component
 
     public int $manualLimit = 10;
 
+    public ?int $manualFilterColumnId = null;
+
+    public string $manualFilterValue = '';
+
     public function mount(Dashboard $dashboard): void
     {
         abort_unless($dashboard->canBeAccessedBy(Auth::user()), 403, 'Você não pode editar este dashboard.');
@@ -52,6 +57,11 @@ class Edit extends Component
         }
 
         $this->manualValueColumnId ??= $this->dashboard->metricColumns()->first()?->id;
+    }
+
+    public function updatedManualFilterColumnId(): void
+    {
+        $this->manualFilterValue = '';
     }
 
     public function generateAutomaticWidgets(): void
@@ -84,6 +94,8 @@ class Edit extends Component
             'manualAggregation' => ['required', 'in:sum,avg,count,min,max'],
             'manualSort' => ['required', 'in:asc,desc'],
             'manualLimit' => ['required', 'integer', 'min:1', 'max:50'],
+            'manualFilterColumnId' => ['nullable', 'integer'],
+            'manualFilterValue' => ['nullable', 'string', 'max:255'],
         ], [
             'manualTitle.required' => 'Informe um título para o gráfico.',
             'manualLimit.max' => 'Use no máximo 50 resultados.',
@@ -100,7 +112,7 @@ class Edit extends Component
                     'aggregation' => $this->manualAggregation,
                     'limit' => $this->manualLimit,
                     'sort' => $this->manualSort,
-                    'filters' => [],
+                    'filters' => $this->manualFilters(),
                 ],
                 $this->manualChartType === DashboardWidgetChartType::Card->value ? 3 : 6,
                 $this->manualChartType === DashboardWidgetChartType::Card->value ? 2 : 4
@@ -151,6 +163,26 @@ class Edit extends Component
         return $this->manualAggregation === DashboardRelationshipAggregation::Count->value;
     }
 
+    public function getManualFilterValuesProperty(): array
+    {
+        $column = $this->manualFilterColumn();
+
+        if (! $column) {
+            return [];
+        }
+
+        return $this->dashboard->rows()
+            ->get()
+            ->map(fn ($row) => $row->data_json[$column->normalized_name] ?? null)
+            ->filter(fn (mixed $value) => $value !== null && $value !== '')
+            ->map(fn (mixed $value) => is_bool($value) ? ($value ? 'Sim' : 'Não') : (string) $value)
+            ->unique()
+            ->sort()
+            ->take(50)
+            ->values()
+            ->all();
+    }
+
     public function render()
     {
         $this->dashboard->load(['columns', 'widgets']);
@@ -170,5 +202,30 @@ class Edit extends Component
             ])
             ->layout('layouts.app')
             ->title('Editar Dashboard | SEDUC BI');
+    }
+
+    private function manualFilterColumn(): ?DashboardColumn
+    {
+        if (! $this->manualFilterColumnId) {
+            return null;
+        }
+
+        return $this->dashboard->columns()->find($this->manualFilterColumnId);
+    }
+
+    /**
+     * @return array<int, array{column_id: int, operator: string, value: string}>
+     */
+    private function manualFilters(): array
+    {
+        if (! $this->manualFilterColumnId || $this->manualFilterValue === '') {
+            return [];
+        }
+
+        return [[
+            'column_id' => $this->manualFilterColumnId,
+            'operator' => 'equals',
+            'value' => $this->manualFilterValue,
+        ]];
     }
 }
