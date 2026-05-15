@@ -33,6 +33,28 @@ class Dashboard extends Model
         return $this->hasMany(DashboardImport::class);
     }
 
+    public function columns(): HasMany
+    {
+        return $this->hasMany(DashboardColumn::class)->orderBy('position');
+    }
+
+    public function rows(): HasMany
+    {
+        return $this->hasMany(DashboardRow::class);
+    }
+
+    public function dimensionalColumns(): HasMany
+    {
+        return $this->columns()
+            ->whereIn('type', ['short_text', 'category', 'identifier', 'date']);
+    }
+
+    public function metricColumns(): HasMany
+    {
+        return $this->columns()
+            ->whereIn('type', ['number', 'money', 'percentage']);
+    }
+
     public function latestImport(): HasOne
     {
         return $this->hasOne(DashboardImport::class)->latestOfMany();
@@ -58,7 +80,7 @@ class Dashboard extends Model
 
     public function recordsCount(): int
     {
-        return 0;
+        return $this->rows()->count();
     }
 
     /**

@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DashboardColumnType;
 use App\Enums\DashboardImportStatus;
+use App\Enums\DashboardStatus;
 use App\Enums\UserRole;
 use App\Livewire\Admin\Sectors\Create as SectorCreate;
 use App\Livewire\Auth\Register;
@@ -10,9 +12,13 @@ use App\Livewire\Dashboards\Create as DashboardCreate;
 use App\Livewire\Dashboards\ImportWizard;
 use App\Livewire\Dashboards\Index as DashboardIndex;
 use App\Models\Dashboard;
+use App\Models\DashboardColumn;
 use App\Models\DashboardImport;
+use App\Models\DashboardRow;
 use App\Models\Sector;
 use App\Models\User;
+use App\Services\ColumnTypeDetectorService;
+use App\Services\ColumnValueConverterService;
 use App\Services\SpreadsheetReaderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -262,7 +268,7 @@ class ExampleTest extends TestCase
                 "Município,Valor previsto,Status\nMaceió,100000,Em andamento\nArapiraca,250000,Concluída\n"
             ))
             ->call('uploadFile')
-            ->assertSet('step', 3)
+            ->assertSet('step', 4)
             ->assertSee('Município')
             ->assertSee('Maceió');
 
@@ -493,5 +499,148 @@ class ExampleTest extends TestCase
                 unlink($path);
             }
         }
+    }
+
+    public function test_column_value_converter_normalizes_money_percentage_and_date(): void
+    {
+        $converter = app(ColumnValueConverterService::class);
+
+        $this->assertSame(350000.0, $converter->convert('R$ 350.000,00', DashboardColumnType::Money));
+        $this->assertSame(735.56, $converter->convert('735,56', DashboardColumnType::Money));
+        $this->assertSame(80.0, $converter->convert('80,00%', DashboardColumnType::Percentage));
+        $this->assertSame(80.0, $converter->convert('0.8', DashboardColumnType::Percentage));
+        $this->assertSame('2026-05-21', $converter->convert('21/05/2026', DashboardColumnType::Date));
+    }
+
+    public function test_column_type_detector_suggests_friendly_types(): void
+    {
+        $detector = app(ColumnTypeDetectorService::class);
+
+        $this->assertSame(DashboardColumnType::Money, $detector->suggest('Valor pago', ['R$ 203.534,80', 'R$ 735,56']));
+        $this->assertSame(DashboardColumnType::Percentage, $detector->suggest('Execução', ['80%', '95,15%']));
+        $this->assertSame(DashboardColumnType::Date, $detector->suggest('Prazo', ['21/05/2026', '2026-05-22']));
+        $this->assertSame(DashboardColumnType::Identifier, $detector->suggest('Processo', ['E:01800.000001/2026']));
+        $this->assertSame(DashboardColumnType::Category, $detector->suggest('Status', ['Em andamento', 'Concluída', 'Em andamento', 'Concluída']));
+    }
+
+    public function test_import_wizard_saves_confirmed_columns_and_converted_rows(): void
+    {
+        Storage::fake('local');
+
+        $sector = Sector::factory()->create();
+        $user = User::factory()->create(['sector_id' => $sector->id]);
+        $dashboard = Dashboard::factory()->create([
+            'sector_id' => $sector->id,
+            'user_id' => $user->id,
+        ]);
+
+        $this->actingAs($user);
+
+        $component = Livewire::test(ImportWizard::class, ['dashboard' => $dashboard])
+            ->set('file', UploadedFile::fake()->createWithContent(
+                'obras.csv',
+                "Município;Valor pago;Execução;Data início;Status\nMaceió;R$ 350.000,00;80%;21/05/2026;Concluída\nPenedo;735,56;0.8;2026-05-22;Em andamento\n"
+            ))
+            ->call('uploadFile')
+            ->assertSet('step', 4);
+
+        $mappings = collect($component->get('columnMappings'))
+            ->map(function (array $mapping): array {
+                $mapping['type'] = match ($mapping['normalized_name']) {
+                    'valor_pago' => DashboardColumnType::Money->value,
+                    'execucao' => DashboardColumnType::Percentage->value,
+                    'data_inicio' => DashboardColumnType::Date->value,
+                    'status' => DashboardColumnType::Category->value,
+                    default => DashboardColumnType::ShortText->value,
+                };
+                $mapping['is_filterable'] = in_array($mapping['normalized_name'], ['municipio', 'status', 'data_inicio'], true);
+                $mapping['is_chartable'] = $mapping['type'] !== DashboardColumnType::ShortText->value;
+
+                return $mapping;
+            })
+            ->values()
+            ->all();
+
+        $component
+            ->set('columnMappings', $mappings)
+            ->call('saveConvertedData')
+            ->assertSet('conversionErrors', [])
+            ->assertSee('Dados convertidos e salvos com sucesso.');
+
+        $dashboard->refresh();
+
+        $this->assertSame(DashboardStatus::Ready, $dashboard->status);
+        $this->assertDatabaseHas('dashboard_imports', [
+            'dashboard_id' => $dashboard->id,
+            'status' => DashboardImportStatus::Converted->value,
+        ]);
+        $this->assertDatabaseHas('dashboard_columns', [
+            'dashboard_id' => $dashboard->id,
+            'normalized_name' => 'valor_pago',
+            'type' => DashboardColumnType::Money->value,
+        ]);
+
+        $rows = DashboardRow::query()->where('dashboard_id', $dashboard->id)->orderBy('id')->get();
+
+        $this->assertCount(2, $rows);
+        $this->assertSame('Maceió', $rows[0]->data_json['municipio']);
+        $this->assertEquals(350000.0, $rows[0]->data_json['valor_pago']);
+        $this->assertEquals(80.0, $rows[0]->data_json['execucao']);
+        $this->assertSame('2026-05-21', $rows[0]->data_json['data_inicio']);
+        $this->assertEquals(735.56, $rows[1]->data_json['valor_pago']);
+        $this->assertEquals(80.0, $rows[1]->data_json['execucao']);
+    }
+
+    public function test_import_wizard_requires_fixing_conversion_errors_before_saving(): void
+    {
+        Storage::fake('local');
+
+        $sector = Sector::factory()->create();
+        $user = User::factory()->create(['sector_id' => $sector->id]);
+        $dashboard = Dashboard::factory()->create([
+            'sector_id' => $sector->id,
+            'user_id' => $user->id,
+        ]);
+
+        $this->actingAs($user);
+
+        $component = Livewire::test(ImportWizard::class, ['dashboard' => $dashboard])
+            ->set('file', UploadedFile::fake()->createWithContent(
+                'erro.csv',
+                "Município;Valor pago\nMaceió;não informado\n"
+            ))
+            ->call('uploadFile');
+
+        $mappings = collect($component->get('columnMappings'))
+            ->map(function (array $mapping): array {
+                $mapping['type'] = $mapping['normalized_name'] === 'valor_pago'
+                    ? DashboardColumnType::Money->value
+                    : DashboardColumnType::ShortText->value;
+
+                return $mapping;
+            })
+            ->values()
+            ->all();
+
+        $component
+            ->set('columnMappings', $mappings)
+            ->call('saveConvertedData')
+            ->assertSet('step', 4);
+
+        $errors = $component->get('conversionErrors');
+
+        $this->assertCount(1, $errors);
+        $this->assertSame('valor_pago', $errors[0]['normalized_name']);
+        $this->assertSame(0, DashboardRow::query()->where('dashboard_id', $dashboard->id)->count());
+        $this->assertSame(0, DashboardColumn::query()->where('dashboard_id', $dashboard->id)->count());
+
+        $component
+            ->set('corrections.'.$errors[0]['id'], 'R$ 123,45')
+            ->call('saveConvertedData')
+            ->assertSet('conversionErrors', []);
+
+        $row = DashboardRow::query()->where('dashboard_id', $dashboard->id)->firstOrFail();
+
+        $this->assertEquals(123.45, $row->data_json['valor_pago']);
     }
 }

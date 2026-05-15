@@ -31,11 +31,11 @@
     </x-card>
 
     <x-card>
-        <div class="grid gap-4 md:grid-cols-3">
-            @foreach ([1 => 'Upload', 2 => 'Escolher aba', 3 => 'Prévia dos dados'] as $number => $label)
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            @foreach ([1 => 'Upload', 2 => 'Escolher aba', 3 => 'Prévia dos dados', 4 => 'Tipos e conversão'] as $number => $label)
                 @php
                     $isDone = $step > $number || ($number === 2 && $importId && $step >= 3);
-                    $isActive = $step === $number || ($number === 3 && count($columns) > 0);
+                    $isActive = $step === $number || ($number === 3 && count($columns) > 0 && $step < 4);
                 @endphp
 
                 <div class="flex items-center gap-3 rounded-2xl border {{ $isActive || $isDone ? 'border-blue-100 bg-blue-50' : 'border-slate-200 bg-white' }} p-4">
@@ -49,8 +49,10 @@
                                 Envie .xlsx ou .csv
                             @elseif ($number === 2)
                                 Confirme a aba e o cabeçalho
-                            @else
+                            @elseif ($number === 3)
                                 Revise colunas e linhas
+                            @else
+                                Confirme e salve
                             @endif
                         </p>
                     </div>
@@ -208,8 +210,8 @@
                 </p>
 
                 <div class="mt-4 space-y-2 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm text-slate-600">
-                    <p class="font-semibold text-slate-950">Preparado para a Etapa 5</p>
-                    <p class="leading-6">As colunas já ficam organizadas com exemplos de valores para a escolha dos tipos de informação.</p>
+                    <p class="font-semibold text-slate-950">Conversão dos dados</p>
+                    <p class="leading-6">Depois da prévia, confirme tipos simples como Dinheiro, Data e Opção/Categoria antes de gravar os dados.</p>
                 </div>
             </x-card>
 
@@ -372,6 +374,170 @@
                 </div>
             </x-card>
         </div>
+
+        @if ($columnMappings)
+            <x-card>
+                <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-950">Confirmar tipos das colunas</h3>
+                        <p class="mt-1 text-sm leading-6 text-slate-600">
+                            Confira a sugestão do sistema e ajuste apenas o que precisar. Estes tipos serão usados para salvar os dados de forma padronizada.
+                        </p>
+                        @error('columnMappings')
+                            <p class="mt-2 text-sm font-semibold text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <x-badge variant="info">{{ count($columnMappings) }} colunas</x-badge>
+                </div>
+
+                <div class="mt-5 grid gap-4 xl:grid-cols-2">
+                    @foreach ($columnMappings as $index => $mapping)
+                        <div wire:key="column-type-{{ $mapping['normalized_name'] }}" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.03)]">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <p class="text-sm font-bold text-slate-950">{{ $mapping['original_name'] }}</p>
+                                        <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-500">{{ $mapping['letter'] }}</span>
+                                    </div>
+                                    <p class="mt-1 text-xs font-semibold text-slate-500">Nome preparado: {{ $mapping['normalized_name'] }}</p>
+                                </div>
+
+                                <x-badge variant="purple">Sugestão: {{ $mapping['suggested_label'] }}</x-badge>
+                            </div>
+
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                @forelse ($mapping['samples'] as $sample)
+                                    <span class="max-w-full truncate rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{{ $sample }}</span>
+                                @empty
+                                    <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">Sem exemplo</span>
+                                @endforelse
+                            </div>
+
+                            <div class="mt-4 grid gap-4 md:grid-cols-2">
+                                <div class="space-y-2">
+                                    <label for="columnType{{ $index }}" class="block text-[13px] font-semibold leading-5 text-slate-950">Tipo de informação</label>
+                                    <select
+                                        id="columnType{{ $index }}"
+                                        wire:model="columnMappings.{{ $index }}.type"
+                                        class="h-11 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-sm text-slate-950 transition focus:border-seduc-primary focus:outline-none focus:ring-4 focus:ring-blue-100"
+                                    >
+                                        @foreach ($this->typeOptions as $typeOption)
+                                            <option value="{{ $typeOption['value'] }}">{{ $typeOption['label'] }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error("columnMappings.$index.type")
+                                        <p class="text-xs font-semibold text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label for="friendlyName{{ $index }}" class="block text-[13px] font-semibold leading-5 text-slate-950">Nome amigável</label>
+                                    <input
+                                        id="friendlyName{{ $index }}"
+                                        type="text"
+                                        wire:model="columnMappings.{{ $index }}.friendly_name"
+                                        class="h-11 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-sm text-slate-950 placeholder:text-slate-400 transition focus:border-seduc-primary focus:outline-none focus:ring-4 focus:ring-blue-100"
+                                    >
+                                    @error("columnMappings.$index.friendly_name")
+                                        <p class="text-xs font-semibold text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div class="mt-4 grid gap-3 sm:grid-cols-3">
+                                <label class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
+                                    <input type="checkbox" wire:model="columnMappings.{{ $index }}.is_filterable" class="h-4 w-4 rounded border-slate-300 text-seduc-primary focus:ring-blue-100">
+                                    Usar em filtros
+                                </label>
+
+                                <label class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
+                                    <input type="checkbox" wire:model="columnMappings.{{ $index }}.is_chartable" class="h-4 w-4 rounded border-slate-300 text-seduc-primary focus:ring-blue-100">
+                                    Usar em gráficos
+                                </label>
+
+                                <label class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
+                                    <input type="checkbox" wire:model="columnMappings.{{ $index }}.is_required" class="h-4 w-4 rounded border-slate-300 text-seduc-primary focus:ring-blue-100">
+                                    Obrigatório
+                                </label>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </x-card>
+        @endif
+
+        @if ($conversionErrors)
+            <x-card padding="p-0">
+                <div class="border-b border-red-100 bg-red-50 p-5">
+                    <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                        <div>
+                            <h3 class="text-lg font-bold text-red-800">Inconsistências encontradas</h3>
+                            <p class="mt-1 text-sm leading-6 text-red-700">
+                                Corrija os valores abaixo ou marque para ignorar o valor desta célula. Nada será salvo enquanto houver inconsistências.
+                            </p>
+                        </div>
+
+                        <x-badge variant="danger">{{ count($conversionErrors) }} ajustes</x-badge>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-200">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-bold text-slate-600">Linha</th>
+                                <th class="min-w-48 px-4 py-3 text-left text-xs font-bold text-slate-600">Coluna</th>
+                                <th class="min-w-48 px-4 py-3 text-left text-xs font-bold text-slate-600">Valor original</th>
+                                <th class="min-w-64 px-4 py-3 text-left text-xs font-bold text-slate-600">Correção</th>
+                                <th class="min-w-48 px-4 py-3 text-left text-xs font-bold text-slate-600">Erro</th>
+                                <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-bold text-slate-600">Ignorar</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 bg-white">
+                            @foreach ($conversionErrors as $error)
+                                <tr wire:key="conversion-error-{{ $error['id'] }}" class="transition hover:bg-slate-50">
+                                    <td class="whitespace-nowrap px-4 py-3 text-xs font-semibold text-slate-500">{{ $error['row_number'] }}</td>
+                                    <td class="px-4 py-3 text-xs font-semibold text-slate-800">{{ $error['column_name'] }}</td>
+                                    <td class="px-4 py-3 text-xs text-slate-700">{{ $error['value'] === '' ? '-' : $error['value'] }}</td>
+                                    <td class="px-4 py-3">
+                                        <input
+                                            type="text"
+                                            wire:model="corrections.{{ $error['id'] }}"
+                                            class="h-10 w-full rounded-[10px] border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-950 placeholder:text-slate-400 transition focus:border-seduc-primary focus:outline-none focus:ring-4 focus:ring-blue-100"
+                                        >
+                                    </td>
+                                    <td class="px-4 py-3 text-xs text-red-700">{{ $error['error'] }}</td>
+                                    <td class="px-4 py-3">
+                                        <label class="inline-flex items-center gap-2 text-xs font-semibold text-slate-700">
+                                            <input type="checkbox" wire:model="ignoredCells.{{ $error['id'] }}" class="h-4 w-4 rounded border-slate-300 text-seduc-primary focus:ring-blue-100">
+                                            Ignorar valor
+                                        </label>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </x-card>
+        @endif
+
+        @if ($columnMappings)
+            <div class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)] md:flex-row md:items-center md:justify-between">
+                <div>
+                    <p class="text-sm font-bold text-slate-950">Salvar dados convertidos</p>
+                    <p class="mt-1 text-sm text-slate-600">
+                        As colunas ignoradas ficam fora do salvamento. As demais serão gravadas com os tipos confirmados.
+                    </p>
+                </div>
+
+                <x-button type="button" wire:click="saveConvertedData" wire:loading.attr="disabled" wire:target="saveConvertedData" class="w-full md:w-auto">
+                    <x-icon name="save" class="h-4 w-4" />
+                    <span wire:loading.remove wire:target="saveConvertedData">Converter e salvar dados</span>
+                    <span wire:loading wire:target="saveConvertedData">Convertendo...</span>
+                </x-button>
+            </div>
+        @endif
 
         <x-card padding="p-0">
             <div class="flex flex-col gap-2 border-b border-slate-200 p-5 md:flex-row md:items-start md:justify-between">

@@ -85,6 +85,59 @@ class SpreadsheetReaderService
         ];
     }
 
+    /**
+     * @return array{
+     *     sheet_name: string,
+     *     header_row: int,
+     *     columns: array<int, array{index: int, letter: string, name: string, normalized_name: string, samples: array<int, string>}>,
+     *     rows: array<int, array{row_number: int, values: array<int, string>}>
+     * }
+     */
+    public function readData(
+        string $absolutePath,
+        ?string $sheetName = null,
+        int $headerRow = 1,
+        int $startColumnIndex = 0,
+        ?int $endRow = null,
+        array $ignoredRows = [],
+        array $excludedColumnIndexes = []
+    ): array {
+        $reader = $this->readerFor($absolutePath);
+        $reader->setReadDataOnly(true);
+        $reader->setReadEmptyCells(true);
+
+        if ($sheetName) {
+            $reader->setLoadSheetsOnly($sheetName);
+        }
+
+        $spreadsheet = $reader->load($absolutePath);
+        $worksheet = $sheetName
+            ? $spreadsheet->getSheetByName($sheetName) ?? $spreadsheet->getActiveSheet()
+            : $spreadsheet->getActiveSheet();
+
+        $startColumnIndex = max(0, $startColumnIndex);
+        $readLimit = $endRow !== null ? max(1, $endRow) : $worksheet->getHighestDataRow();
+        $ignoredRows = array_values(array_unique(array_map('intval', $ignoredRows)));
+        $excludedColumnIndexes = array_values(array_unique(array_map('intval', $excludedColumnIndexes)));
+
+        $read = $this->readRows($worksheet, $readLimit, $startColumnIndex, $excludedColumnIndexes);
+        $rows = $read['rows'];
+        $columnIndexes = $read['column_indexes'];
+        $headerRow = max(1, min($headerRow, max(array_keys($rows) ?: [1])));
+        $headerValues = $rows[$headerRow] ?? [];
+        $dataRows = $this->previewRows($rows, $headerRow, PHP_INT_MAX, $ignoredRows);
+        $columns = $this->columns($headerValues, $dataRows, $columnIndexes);
+
+        $spreadsheet->disconnectWorksheets();
+
+        return [
+            'sheet_name' => $worksheet->getTitle(),
+            'header_row' => $headerRow,
+            'columns' => $columns,
+            'rows' => $dataRows,
+        ];
+    }
+
     private function readerFor(string $absolutePath): IReader
     {
         $reader = IOFactory::createReaderForFile($absolutePath, [
