@@ -48,6 +48,14 @@ class Dashboard extends Model
         return $this->hasMany(DashboardRelationship::class);
     }
 
+    public function widgets(): HasMany
+    {
+        return $this->hasMany(DashboardWidget::class)
+            ->orderBy('position_y')
+            ->orderBy('position_x')
+            ->orderBy('id');
+    }
+
     public function validRelationships(): HasMany
     {
         return $this->relationships()

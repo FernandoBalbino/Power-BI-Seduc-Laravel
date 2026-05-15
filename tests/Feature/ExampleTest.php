@@ -7,10 +7,12 @@ use App\Enums\DashboardImportStatus;
 use App\Enums\DashboardRelationshipAggregation;
 use App\Enums\DashboardRelationshipType;
 use App\Enums\DashboardStatus;
+use App\Enums\DashboardWidgetChartType;
 use App\Enums\UserRole;
 use App\Livewire\Admin\Sectors\Create as SectorCreate;
 use App\Livewire\Auth\Register;
 use App\Livewire\Dashboards\Create as DashboardCreate;
+use App\Livewire\Dashboards\Edit as DashboardEdit;
 use App\Livewire\Dashboards\ImportWizard;
 use App\Livewire\Dashboards\Index as DashboardIndex;
 use App\Livewire\Dashboards\Relationships;
@@ -19,10 +21,13 @@ use App\Models\DashboardColumn;
 use App\Models\DashboardImport;
 use App\Models\DashboardRelationship;
 use App\Models\DashboardRow;
+use App\Models\DashboardWidget;
 use App\Models\Sector;
 use App\Models\User;
+use App\Services\ChartSuggestionService;
 use App\Services\ColumnTypeDetectorService;
 use App\Services\ColumnValueConverterService;
+use App\Services\DashboardQueryService;
 use App\Services\RelationshipSuggestionService;
 use App\Services\SpreadsheetReaderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -792,6 +797,120 @@ class ExampleTest extends TestCase
             ->assertHasErrors(['manualRelationships']);
     }
 
+    public function test_dashboard_query_service_groups_and_aggregates_widget_data(): void
+    {
+        $context = $this->createDashboardWithRelationshipColumns();
+        $data = app(DashboardQueryService::class)->seriesData(
+            $context['dashboard'],
+            $context['columns']['municipio'],
+            $context['columns']['valor_pago'],
+            DashboardRelationshipAggregation::Sum,
+            10,
+            'desc'
+        );
+
+        $this->assertSame(['Maceió', 'Penedo'], $data['categories']);
+        $this->assertEquals([500000.0, 250000.0], $data['series'][0]['data']);
+    }
+
+    public function test_chart_suggestion_service_creates_automatic_widgets_from_relationships(): void
+    {
+        $context = $this->createDashboardWithRelationshipColumns();
+        $service = app(RelationshipSuggestionService::class);
+
+        $service->createRelationship(
+            $context['dashboard'],
+            $context['columns']['municipio'],
+            $context['columns']['valor_pago'],
+            DashboardRelationshipAggregation::Sum,
+            DashboardRelationshipType::Auto
+        );
+        $service->createRelationship(
+            $context['dashboard'],
+            $context['columns']['status'],
+            null,
+            DashboardRelationshipAggregation::Count,
+            DashboardRelationshipType::Auto
+        );
+        $service->createRelationship(
+            $context['dashboard'],
+            $context['columns']['data_pagamento'],
+            $context['columns']['valor_pago'],
+            DashboardRelationshipAggregation::Sum,
+            DashboardRelationshipType::Auto
+        );
+
+        $widgets = app(ChartSuggestionService::class)->createAutomaticWidgets($context['dashboard']);
+
+        $this->assertGreaterThanOrEqual(4, count($widgets));
+        $this->assertLessThanOrEqual(8, count($widgets));
+        $this->assertDatabaseHas('dashboard_widgets', [
+            'dashboard_id' => $context['dashboard']->id,
+            'chart_type' => DashboardWidgetChartType::Bar->value,
+            'title' => 'Valor Pago por Município',
+        ]);
+        $this->assertDatabaseHas('dashboard_widgets', [
+            'dashboard_id' => $context['dashboard']->id,
+            'chart_type' => DashboardWidgetChartType::Donut->value,
+            'title' => 'Status por quantidade',
+        ]);
+        $this->assertDatabaseHas('dashboard_widgets', [
+            'dashboard_id' => $context['dashboard']->id,
+            'chart_type' => DashboardWidgetChartType::Line->value,
+            'title' => 'Evolução de Valor Pago',
+        ]);
+    }
+
+    public function test_dashboard_edit_component_creates_manual_widget(): void
+    {
+        $context = $this->createDashboardWithRelationshipColumns();
+
+        $this->actingAs($context['user']);
+
+        Livewire::test(DashboardEdit::class, ['dashboard' => $context['dashboard']])
+            ->set('manualTitle', 'Valor por Município')
+            ->set('manualChartType', DashboardWidgetChartType::Bar->value)
+            ->set('manualGroupingColumnId', $context['columns']['municipio']->id)
+            ->set('manualValueColumnId', $context['columns']['valor_pago']->id)
+            ->set('manualAggregation', DashboardRelationshipAggregation::Sum->value)
+            ->set('manualLimit', 10)
+            ->call('saveManualWidget')
+            ->assertSee('Widget criado com sucesso.');
+
+        $this->assertDatabaseHas('dashboard_widgets', [
+            'dashboard_id' => $context['dashboard']->id,
+            'title' => 'Valor por Município',
+            'chart_type' => DashboardWidgetChartType::Bar->value,
+        ]);
+    }
+
+    public function test_dashboard_show_renders_saved_widget(): void
+    {
+        $context = $this->createDashboardWithRelationshipColumns();
+        DashboardWidget::query()->create([
+            'dashboard_id' => $context['dashboard']->id,
+            'title' => 'Valor por Município',
+            'chart_type' => DashboardWidgetChartType::Bar,
+            'config_json' => [
+                'base_column_id' => $context['columns']['municipio']->id,
+                'value_column_id' => $context['columns']['valor_pago']->id,
+                'aggregation' => DashboardRelationshipAggregation::Sum->value,
+                'limit' => 10,
+                'sort' => 'desc',
+                'filters' => [],
+            ],
+            'position_x' => 0,
+            'position_y' => 0,
+            'width' => 6,
+            'height' => 4,
+        ]);
+
+        $this->actingAs($context['user'])
+            ->get(route('dashboards.show', $context['dashboard']))
+            ->assertOk()
+            ->assertSee('Valor por Município');
+    }
+
     private function createDashboardWithRelationshipColumns(): array
     {
         $sector = Sector::factory()->create(['name' => 'SUENG']);
@@ -864,6 +983,48 @@ class ExampleTest extends TestCase
                 'position' => 6,
             ]),
         ];
+
+        DashboardRow::query()->create([
+            'dashboard_id' => $dashboard->id,
+            'row_hash' => 'row-1',
+            'data_json' => [
+                'municipio' => 'Maceió',
+                'status' => 'Concluída',
+                'numero_convenio' => '001',
+                'valor_pago' => 350000,
+                'execucao' => 90,
+                'data_pagamento' => '2026-05-01',
+            ],
+            'created_by' => $user->id,
+        ]);
+
+        DashboardRow::query()->create([
+            'dashboard_id' => $dashboard->id,
+            'row_hash' => 'row-2',
+            'data_json' => [
+                'municipio' => 'Maceió',
+                'status' => 'Em andamento',
+                'numero_convenio' => '002',
+                'valor_pago' => 150000,
+                'execucao' => 50,
+                'data_pagamento' => '2026-05-02',
+            ],
+            'created_by' => $user->id,
+        ]);
+
+        DashboardRow::query()->create([
+            'dashboard_id' => $dashboard->id,
+            'row_hash' => 'row-3',
+            'data_json' => [
+                'municipio' => 'Penedo',
+                'status' => 'Concluída',
+                'numero_convenio' => '003',
+                'valor_pago' => 250000,
+                'execucao' => 70,
+                'data_pagamento' => '2026-05-03',
+            ],
+            'created_by' => $user->id,
+        ]);
 
         return compact('sector', 'user', 'dashboard', 'columns');
     }

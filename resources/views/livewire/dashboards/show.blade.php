@@ -66,27 +66,53 @@
         </x-card>
     </div>
 
-    <x-card>
-        <div class="flex min-h-[360px] flex-col items-center justify-center text-center">
-            <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-seduc-primary-soft text-seduc-primary">
-                <x-icon name="file-spreadsheet" class="h-8 w-8" />
-            </div>
-            <h3 class="mt-5 text-xl font-bold text-slate-950">Este dashboard ainda não possui dados importados.</h3>
-            <p class="mt-2 max-w-xl text-sm leading-6 text-slate-600">
-                Na próxima etapa, esta área receberá a leitura da planilha, a revisão de colunas e os primeiros gráficos.
-            </p>
+    @if ($widgets->isNotEmpty())
+        <div class="grid grid-cols-1 gap-5 xl:grid-cols-12">
+            @foreach ($widgets as $widget)
+                @php
+                    $span = min(12, max(3, (int) $widget->width));
+                    $spanClass = [
+                        3 => 'xl:col-span-3',
+                        4 => 'xl:col-span-4',
+                        5 => 'xl:col-span-5',
+                        6 => 'xl:col-span-6',
+                        7 => 'xl:col-span-7',
+                        8 => 'xl:col-span-8',
+                        9 => 'xl:col-span-9',
+                        10 => 'xl:col-span-10',
+                        11 => 'xl:col-span-11',
+                        12 => 'xl:col-span-12',
+                    ][$span] ?? 'xl:col-span-6';
+                @endphp
 
-            <div class="mt-5 flex flex-wrap justify-center gap-3">
-                <a href="{{ route('dashboards.feed', $dashboard) }}" wire:navigate class="inline-flex h-11 items-center gap-2 rounded-[10px] bg-seduc-primary px-[18px] text-sm font-semibold text-white shadow-seduc-button transition hover:bg-seduc-primary-hover">
-                    <x-icon name="upload" class="h-4 w-4" />
-                    Alimentar Dados
-                </a>
-
-                <a href="{{ route('dashboards.edit', $dashboard) }}" wire:navigate class="inline-flex h-11 items-center gap-2 rounded-[10px] border border-slate-200 bg-white px-[18px] text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-                    <x-icon name="chart-bar" class="h-4 w-4" />
-                    Editar Dashboard
-                </a>
-            </div>
+                <x-dashboard-widget :widget="$widget" :data="$widgetData[$widget->id] ?? []" class="{{ $spanClass }}" />
+            @endforeach
         </div>
-    </x-card>
+    @else
+        <x-card>
+            <div class="flex min-h-[360px] flex-col items-center justify-center text-center">
+                <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-seduc-primary-soft text-seduc-primary">
+                    <x-icon name="file-spreadsheet" class="h-8 w-8" />
+                </div>
+                <h3 class="mt-5 text-xl font-bold text-slate-950">
+                    {{ $dashboard->recordsCount() > 0 ? 'Este dashboard ainda não possui gráficos.' : 'Este dashboard ainda não possui dados importados.' }}
+                </h3>
+                <p class="mt-2 max-w-xl text-sm leading-6 text-slate-600">
+                    {{ $dashboard->recordsCount() > 0 ? 'Gere widgets automaticamente ou crie gráficos manualmente a partir dos relacionamentos.' : 'Importe uma planilha para liberar a revisão de colunas, relacionamentos e gráficos.' }}
+                </p>
+
+                <div class="mt-5 flex flex-wrap justify-center gap-3">
+                    <a href="{{ route('dashboards.feed', $dashboard) }}" wire:navigate class="inline-flex h-11 items-center gap-2 rounded-[10px] bg-seduc-primary px-[18px] text-sm font-semibold text-white shadow-seduc-button transition hover:bg-seduc-primary-hover">
+                        <x-icon name="upload" class="h-4 w-4" />
+                        Alimentar Dados
+                    </a>
+
+                    <a href="{{ route('dashboards.edit', $dashboard) }}" wire:navigate class="inline-flex h-11 items-center gap-2 rounded-[10px] border border-slate-200 bg-white px-[18px] text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                        <x-icon name="chart-bar" class="h-4 w-4" />
+                        Gerar Gráficos
+                    </a>
+                </div>
+            </div>
+        </x-card>
+    @endif
 </div>

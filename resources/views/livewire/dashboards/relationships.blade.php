@@ -39,6 +39,11 @@
                     <x-icon name="plus-circle" class="h-4 w-4" />
                     Criar manualmente
                 </button>
+
+                <a href="{{ route('dashboards.edit', $dashboard) }}" wire:navigate class="inline-flex h-11 items-center gap-2 rounded-[10px] bg-seduc-primary px-[18px] text-sm font-semibold text-white shadow-seduc-button transition hover:bg-seduc-primary-hover">
+                    <x-icon name="chart-bar" class="h-4 w-4" />
+                    Gerar gráficos
+                </a>
             </div>
         </div>
     </x-card>
