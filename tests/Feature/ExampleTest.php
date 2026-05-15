@@ -417,6 +417,45 @@ class ExampleTest extends TestCase
         $this->assertSame(['D'], $import->excluded_columns);
     }
 
+    public function test_import_wizard_column_options_are_independent_between_columns(): void
+    {
+        Storage::fake('local');
+
+        $sector = Sector::factory()->create();
+        $user = User::factory()->create(['sector_id' => $sector->id]);
+        $dashboard = Dashboard::factory()->create([
+            'sector_id' => $sector->id,
+            'user_id' => $user->id,
+        ]);
+
+        $this->actingAs($user);
+
+        $component = Livewire::test(ImportWizard::class, ['dashboard' => $dashboard])
+            ->set('file', UploadedFile::fake()->createWithContent(
+                'opcoes.csv',
+                "MUNICIPIO;OBJETO;;VALOR\nMar Vermelho;Reforma da escola;E:01800.000001/2026;350000\nPenedo;Construção de quadra;E:01800.000002/2026;1421225.22\n"
+            ))
+            ->call('uploadFile');
+
+        $mappings = $component->get('columnMappings');
+
+        $this->assertArrayHasKey('col_objeto', $mappings);
+        $this->assertArrayHasKey('col_coluna_3', $mappings);
+
+        $component
+            ->set('columnMappings.col_coluna_3.is_filterable', false)
+            ->set('columnMappings.col_coluna_3.is_chartable', false)
+            ->set('columnMappings.col_objeto.is_filterable', true)
+            ->set('columnMappings.col_objeto.is_chartable', true);
+
+        $updatedMappings = $component->get('columnMappings');
+
+        $this->assertTrue($updatedMappings['col_objeto']['is_filterable']);
+        $this->assertTrue($updatedMappings['col_objeto']['is_chartable']);
+        $this->assertFalse($updatedMappings['col_coluna_3']['is_filterable']);
+        $this->assertFalse($updatedMappings['col_coluna_3']['is_chartable']);
+    }
+
     public function test_spreadsheet_reader_reads_xlsx_sheets_columns_and_preview(): void
     {
         $path = storage_path('framework/testing/import-wizard-sample.xlsx');

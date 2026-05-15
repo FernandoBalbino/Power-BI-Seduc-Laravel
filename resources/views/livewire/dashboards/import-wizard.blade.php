@@ -66,8 +66,14 @@
             <div
                 x-data="{
                     dragging: false,
+                    selectedName: @js($file?->getClientOriginalName() ?? $uploadedFilename),
                     browse() {
                         this.$refs.file.click();
+                    },
+                    selectFile(event) {
+                        const files = event.target.files;
+
+                        this.selectedName = files.length ? files[0].name : null;
                     },
                     dropFile(event) {
                         const files = event.dataTransfer.files;
@@ -77,6 +83,7 @@
                         }
 
                         this.$refs.file.files = files;
+                        this.selectedName = files[0].name;
                         this.$refs.file.dispatchEvent(new Event('change', { bubbles: true }));
                     }
                 }"
@@ -91,28 +98,38 @@
                 @dragleave.prevent="dragging = false"
                 @drop.prevent="dragging = false; dropFile($event)"
                 class="block cursor-pointer rounded-[14px] border-2 border-dashed border-[#6EA8FE] bg-[#F9FBFF] px-6 py-10 text-center transition hover:bg-blue-50"
-                :class="dragging ? 'border-seduc-primary bg-blue-50 ring-4 ring-blue-100' : ''"
+                :class="dragging || selectedName ? 'border-seduc-primary bg-blue-50 ring-4 ring-blue-100' : ''"
             >
                 <input
                     x-ref="file"
                     id="spreadsheet-file"
                     type="file"
                     wire:model="file"
+                    @change="selectFile($event)"
                     accept=".xlsx,.csv"
                     class="sr-only"
                 >
 
                 <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-seduc-primary-soft text-seduc-primary">
-                    <x-icon name="cloud-upload" class="h-7 w-7" />
+                    <span x-show="! selectedName">
+                        <x-icon name="cloud-upload" class="h-7 w-7" />
+                    </span>
+                    <span x-cloak x-show="selectedName">
+                        <x-icon name="circle-check" class="h-7 w-7" />
+                    </span>
                 </div>
-                <h3 class="mt-5 text-xl font-bold text-slate-950">Selecione ou arraste a planilha</h3>
-                <p class="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+                <h3 class="mt-5 text-xl font-bold text-slate-950" x-text="selectedName ? 'Planilha selecionada' : 'Selecione ou arraste a planilha'">Selecione ou arraste a planilha</h3>
+                <p x-show="! selectedName" class="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-600">
                     Solte o arquivo aqui ou procure no computador. Use .xlsx ou .csv com até {{ $this->maxUploadMb }} MB.
+                </p>
+                <p x-cloak x-show="selectedName" class="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+                    Arquivo pronto para envio:
+                    <span class="font-bold text-slate-950" x-text="selectedName"></span>
                 </p>
 
                 <div class="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-[10px] bg-seduc-primary px-[18px] text-sm font-semibold text-white shadow-seduc-button">
                     <x-icon name="file-spreadsheet" class="h-4 w-4" />
-                    Procurar arquivo
+                    <span x-text="selectedName ? 'Trocar arquivo' : 'Procurar arquivo'">Procurar arquivo</span>
                 </div>
             </div>
 
@@ -392,8 +409,8 @@
                 </div>
 
                 <div class="mt-5 grid gap-4 xl:grid-cols-2">
-                    @foreach ($columnMappings as $index => $mapping)
-                        <div wire:key="column-type-{{ $mapping['normalized_name'] }}" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.03)]">
+                    @foreach ($columnMappings as $mappingKey => $mapping)
+                        <div wire:key="column-type-{{ $mappingKey }}" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.03)]">
                             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
                                     <div class="flex flex-wrap items-center gap-2">
@@ -416,48 +433,68 @@
 
                             <div class="mt-4 grid gap-4 md:grid-cols-2">
                                 <div class="space-y-2">
-                                    <label for="columnType{{ $index }}" class="block text-[13px] font-semibold leading-5 text-slate-950">Tipo de informação</label>
+                                    <label for="columnType{{ $mappingKey }}" class="block text-[13px] font-semibold leading-5 text-slate-950">Tipo de informação</label>
                                     <select
-                                        id="columnType{{ $index }}"
-                                        wire:model="columnMappings.{{ $index }}.type"
+                                        id="columnType{{ $mappingKey }}"
+                                        wire:key="column-type-select-{{ $mappingKey }}"
+                                        wire:model.live="columnMappings.{{ $mappingKey }}.type"
                                         class="h-11 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-sm text-slate-950 transition focus:border-seduc-primary focus:outline-none focus:ring-4 focus:ring-blue-100"
                                     >
                                         @foreach ($this->typeOptions as $typeOption)
                                             <option value="{{ $typeOption['value'] }}">{{ $typeOption['label'] }}</option>
                                         @endforeach
                                     </select>
-                                    @error("columnMappings.$index.type")
+                                    @error("columnMappings.$mappingKey.type")
                                         <p class="text-xs font-semibold text-red-600">{{ $message }}</p>
                                     @enderror
                                 </div>
 
                                 <div class="space-y-2">
-                                    <label for="friendlyName{{ $index }}" class="block text-[13px] font-semibold leading-5 text-slate-950">Nome amigável</label>
+                                    <label for="friendlyName{{ $mappingKey }}" class="block text-[13px] font-semibold leading-5 text-slate-950">Nome amigável</label>
                                     <input
-                                        id="friendlyName{{ $index }}"
+                                        id="friendlyName{{ $mappingKey }}"
                                         type="text"
-                                        wire:model="columnMappings.{{ $index }}.friendly_name"
+                                        wire:key="column-friendly-name-{{ $mappingKey }}"
+                                        wire:model="columnMappings.{{ $mappingKey }}.friendly_name"
                                         class="h-11 w-full rounded-[10px] border border-slate-300 bg-white px-3.5 text-sm text-slate-950 placeholder:text-slate-400 transition focus:border-seduc-primary focus:outline-none focus:ring-4 focus:ring-blue-100"
                                     >
-                                    @error("columnMappings.$index.friendly_name")
+                                    @error("columnMappings.$mappingKey.friendly_name")
                                         <p class="text-xs font-semibold text-red-600">{{ $message }}</p>
                                     @enderror
                                 </div>
                             </div>
 
                             <div class="mt-4 grid gap-3 sm:grid-cols-3">
-                                <label class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
-                                    <input type="checkbox" wire:model="columnMappings.{{ $index }}.is_filterable" class="h-4 w-4 rounded border-slate-300 text-seduc-primary focus:ring-blue-100">
+                                <label for="filterable{{ $mappingKey }}" class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
+                                    <input
+                                        id="filterable{{ $mappingKey }}"
+                                        type="checkbox"
+                                        wire:key="column-filterable-{{ $mappingKey }}"
+                                        wire:model.live="columnMappings.{{ $mappingKey }}.is_filterable"
+                                        class="h-4 w-4 rounded border-slate-300 text-seduc-primary focus:ring-blue-100"
+                                    >
                                     Usar em filtros
                                 </label>
 
-                                <label class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
-                                    <input type="checkbox" wire:model="columnMappings.{{ $index }}.is_chartable" class="h-4 w-4 rounded border-slate-300 text-seduc-primary focus:ring-blue-100">
+                                <label for="chartable{{ $mappingKey }}" class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
+                                    <input
+                                        id="chartable{{ $mappingKey }}"
+                                        type="checkbox"
+                                        wire:key="column-chartable-{{ $mappingKey }}"
+                                        wire:model.live="columnMappings.{{ $mappingKey }}.is_chartable"
+                                        class="h-4 w-4 rounded border-slate-300 text-seduc-primary focus:ring-blue-100"
+                                    >
                                     Usar em gráficos
                                 </label>
 
-                                <label class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
-                                    <input type="checkbox" wire:model="columnMappings.{{ $index }}.is_required" class="h-4 w-4 rounded border-slate-300 text-seduc-primary focus:ring-blue-100">
+                                <label for="required{{ $mappingKey }}" class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
+                                    <input
+                                        id="required{{ $mappingKey }}"
+                                        type="checkbox"
+                                        wire:key="column-required-{{ $mappingKey }}"
+                                        wire:model.live="columnMappings.{{ $mappingKey }}.is_required"
+                                        class="h-4 w-4 rounded border-slate-300 text-seduc-primary focus:ring-blue-100"
+                                    >
                                     Obrigatório
                                 </label>
                             </div>

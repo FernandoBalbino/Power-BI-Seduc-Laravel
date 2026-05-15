@@ -446,8 +446,10 @@ class ImportWizard extends Component
             $suggestedType = $detector->suggest($column['name'], $column['samples']);
             $selectedType = $previous['type'] ?? $suggestedType->value;
             $type = DashboardColumnType::tryFrom($selectedType) ?? $suggestedType;
+            $mappingKey = 'col_'.$column['normalized_name'];
 
-            $mappings[] = [
+            $mappings[$mappingKey] = [
+                'mapping_key' => $mappingKey,
                 'index' => $column['index'],
                 'letter' => $column['letter'],
                 'original_name' => $column['name'],

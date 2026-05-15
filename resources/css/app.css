@@ -42,6 +42,10 @@
 }
 
 @layer utilities {
+    [x-cloak] {
+        display: none !important;
+    }
+
     .seduc-focus {
         outline: none;
         box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.12);
