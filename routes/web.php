@@ -11,6 +11,7 @@ use App\Livewire\Dashboards\Edit as DashboardEdit;
 use App\Livewire\Dashboards\EditBasic as DashboardEditBasic;
 use App\Livewire\Dashboards\ImportWizard as DashboardImportWizard;
 use App\Livewire\Dashboards\Index as DashboardIndex;
+use App\Livewire\Dashboards\Relationships as DashboardRelationships;
 use App\Livewire\Dashboards\Show as DashboardShow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -40,6 +41,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/dashboards/{dashboard}/editar-basico', DashboardEditBasic::class)->name('dashboards.edit-basic');
     Route::get('/dashboards/{dashboard}/alimentar', DashboardImportWizard::class)->name('dashboards.feed');
     Route::get('/dashboards/{dashboard}/importar', DashboardImportWizard::class)->name('dashboards.import');
+    Route::get('/dashboards/{dashboard}/relacionar-colunas', DashboardRelationships::class)->name('dashboards.relationships');
     Route::get('/dashboards/{dashboard}/editar', DashboardEdit::class)->name('dashboards.edit');
     Route::view('/profile', 'profile.show')->name('profile');
 

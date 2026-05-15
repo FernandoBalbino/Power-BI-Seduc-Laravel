@@ -576,6 +576,32 @@
             </div>
         @endif
 
+        @if ($importStatus === \App\Enums\DashboardImportStatus::Converted->value)
+            <x-card>
+                <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <x-badge variant="success">Dados convertidos</x-badge>
+                        <h3 class="mt-3 text-lg font-bold text-slate-950">Próximo passo: relacionar colunas</h3>
+                        <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
+                            Agora você pode deixar o sistema sugerir combinações para gráficos ou criar os relacionamentos manualmente.
+                        </p>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2">
+                        <a href="{{ route('dashboards.relationships', $dashboard) }}?modo=automatic" wire:navigate class="inline-flex h-11 items-center gap-2 rounded-[10px] bg-seduc-primary px-[18px] text-sm font-semibold text-white shadow-seduc-button transition hover:bg-seduc-primary-hover">
+                            <x-icon name="refresh-cw" class="h-4 w-4" />
+                            Criar automaticamente
+                        </a>
+
+                        <a href="{{ route('dashboards.relationships', $dashboard) }}?modo=manual" wire:navigate class="inline-flex h-11 items-center gap-2 rounded-[10px] border border-slate-200 bg-white px-[18px] text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                            <x-icon name="plus-circle" class="h-4 w-4" />
+                            Criar manualmente
+                        </a>
+                    </div>
+                </div>
+            </x-card>
+        @endif
+
         <x-card padding="p-0">
             <div class="flex flex-col gap-2 border-b border-slate-200 p-5 md:flex-row md:items-start md:justify-between">
                 <div>

@@ -6,6 +6,7 @@ use App\Enums\DashboardColumnType;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'dashboard_id',
@@ -33,6 +34,21 @@ class DashboardColumn extends Model
     public function isMetric(): bool
     {
         return $this->type->isMetric();
+    }
+
+    public function baseRelationships(): HasMany
+    {
+        return $this->hasMany(DashboardRelationship::class, 'base_column_id');
+    }
+
+    public function relatedRelationships(): HasMany
+    {
+        return $this->hasMany(DashboardRelationship::class, 'related_column_id');
+    }
+
+    public function displayName(): string
+    {
+        return $this->friendly_name ?: $this->original_name;
     }
 
     /**

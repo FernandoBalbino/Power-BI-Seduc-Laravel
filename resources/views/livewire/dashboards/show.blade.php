@@ -34,6 +34,13 @@
                     </a>
                 @endif
 
+                @if ($dashboard->columns()->exists())
+                    <a href="{{ route('dashboards.relationships', $dashboard) }}" wire:navigate class="inline-flex h-11 items-center gap-2 rounded-[10px] bg-seduc-primary px-[18px] text-sm font-semibold text-white shadow-seduc-button transition hover:bg-seduc-primary-hover">
+                        <x-icon name="refresh-cw" class="h-4 w-4" />
+                        Relacionar Colunas
+                    </a>
+                @endif
+
                 <a href="{{ route('dashboards.edit-basic', $dashboard) }}" wire:navigate class="inline-flex h-11 items-center gap-2 rounded-[10px] border border-slate-200 bg-white px-[18px] text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
                     <x-icon name="pencil" class="h-4 w-4" />
                     Editar Informações

@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Enums\DashboardColumnType;
 use App\Enums\DashboardImportStatus;
+use App\Enums\DashboardRelationshipAggregation;
+use App\Enums\DashboardRelationshipType;
 use App\Enums\DashboardStatus;
 use App\Enums\UserRole;
 use App\Livewire\Admin\Sectors\Create as SectorCreate;
@@ -11,14 +13,17 @@ use App\Livewire\Auth\Register;
 use App\Livewire\Dashboards\Create as DashboardCreate;
 use App\Livewire\Dashboards\ImportWizard;
 use App\Livewire\Dashboards\Index as DashboardIndex;
+use App\Livewire\Dashboards\Relationships;
 use App\Models\Dashboard;
 use App\Models\DashboardColumn;
 use App\Models\DashboardImport;
+use App\Models\DashboardRelationship;
 use App\Models\DashboardRow;
 use App\Models\Sector;
 use App\Models\User;
 use App\Services\ColumnTypeDetectorService;
 use App\Services\ColumnValueConverterService;
+use App\Services\RelationshipSuggestionService;
 use App\Services\SpreadsheetReaderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -681,5 +686,185 @@ class ExampleTest extends TestCase
         $row = DashboardRow::query()->where('dashboard_id', $dashboard->id)->firstOrFail();
 
         $this->assertEquals(123.45, $row->data_json['valor_pago']);
+    }
+
+    public function test_relationship_service_suggests_automatic_relationships(): void
+    {
+        $context = $this->createDashboardWithRelationshipColumns();
+        $suggestions = collect(app(RelationshipSuggestionService::class)->suggest($context['dashboard']));
+
+        $this->assertTrue($suggestions->contains(fn (array $suggestion) => $suggestion['base_name'] === 'Município'
+            && $suggestion['related_name'] === 'Valor Pago'
+            && $suggestion['aggregation'] === DashboardRelationshipAggregation::Sum->value));
+
+        $this->assertTrue($suggestions->contains(fn (array $suggestion) => $suggestion['base_name'] === 'Município'
+            && $suggestion['related_name'] === '% Execução'
+            && $suggestion['aggregation'] === DashboardRelationshipAggregation::Avg->value));
+
+        $this->assertTrue($suggestions->contains(fn (array $suggestion) => $suggestion['base_name'] === 'Status'
+            && $suggestion['related_name'] === 'Quantidade de registros'
+            && $suggestion['aggregation'] === DashboardRelationshipAggregation::Count->value));
+
+        $this->assertFalse($suggestions->contains(fn (array $suggestion) => $suggestion['base_name'] === 'Nº Convênio'));
+    }
+
+    public function test_relationship_component_saves_automatic_suggestions(): void
+    {
+        $context = $this->createDashboardWithRelationshipColumns();
+
+        $this->actingAs($context['user']);
+
+        Livewire::test(Relationships::class, ['dashboard' => $context['dashboard']])
+            ->assertSee('Relacionar Colunas')
+            ->assertSee('Sugestões automáticas')
+            ->call('acceptAllSuggestions');
+
+        $this->assertDatabaseHas('dashboard_relationships', [
+            'dashboard_id' => $context['dashboard']->id,
+            'base_column_id' => $context['columns']['municipio']->id,
+            'related_column_id' => $context['columns']['valor_pago']->id,
+            'aggregation' => DashboardRelationshipAggregation::Sum->value,
+            'relationship_type' => DashboardRelationshipType::Auto->value,
+        ]);
+
+        $this->assertDatabaseHas('dashboard_relationships', [
+            'dashboard_id' => $context['dashboard']->id,
+            'base_column_id' => $context['columns']['status']->id,
+            'related_column_id' => null,
+            'aggregation' => DashboardRelationshipAggregation::Count->value,
+        ]);
+    }
+
+    public function test_relationship_component_saves_manual_relationship(): void
+    {
+        $context = $this->createDashboardWithRelationshipColumns();
+
+        $this->actingAs($context['user']);
+
+        Livewire::test(Relationships::class, ['dashboard' => $context['dashboard']])
+            ->set('mode', 'manual')
+            ->set('manualBaseColumnId', $context['columns']['status']->id)
+            ->set('manualRelatedColumnIds', [(string) $context['columns']['valor_pago']->id])
+            ->set('manualAggregations.'.$context['columns']['valor_pago']->id, DashboardRelationshipAggregation::Sum->value)
+            ->call('saveManualRelationships');
+
+        $this->assertDatabaseHas('dashboard_relationships', [
+            'dashboard_id' => $context['dashboard']->id,
+            'base_column_id' => $context['columns']['status']->id,
+            'related_column_id' => $context['columns']['valor_pago']->id,
+            'aggregation' => DashboardRelationshipAggregation::Sum->value,
+            'relationship_type' => DashboardRelationshipType::Manual->value,
+        ]);
+    }
+
+    public function test_relationship_component_blocks_duplicate_and_invalid_manual_relationships(): void
+    {
+        $context = $this->createDashboardWithRelationshipColumns();
+
+        $this->actingAs($context['user']);
+
+        $component = Livewire::test(Relationships::class, ['dashboard' => $context['dashboard']])
+            ->set('mode', 'manual')
+            ->set('manualBaseColumnId', $context['columns']['status']->id)
+            ->set('manualRelatedColumnIds', [(string) $context['columns']['valor_pago']->id])
+            ->set('manualAggregations.'.$context['columns']['valor_pago']->id, DashboardRelationshipAggregation::Sum->value)
+            ->call('saveManualRelationships');
+
+        $component
+            ->set('manualRelatedColumnIds', [(string) $context['columns']['valor_pago']->id])
+            ->set('manualAggregations.'.$context['columns']['valor_pago']->id, DashboardRelationshipAggregation::Sum->value)
+            ->call('saveManualRelationships')
+            ->assertHasErrors(['manualRelationships']);
+
+        $this->assertSame(1, DashboardRelationship::query()
+            ->where('dashboard_id', $context['dashboard']->id)
+            ->where('base_column_id', $context['columns']['status']->id)
+            ->where('related_column_id', $context['columns']['valor_pago']->id)
+            ->where('aggregation', DashboardRelationshipAggregation::Sum->value)
+            ->count());
+
+        Livewire::test(Relationships::class, ['dashboard' => $context['dashboard']])
+            ->set('mode', 'manual')
+            ->set('manualBaseColumnId', $context['columns']['status']->id)
+            ->set('manualRelatedColumnIds', [(string) $context['columns']['municipio']->id])
+            ->set('manualAggregations.'.$context['columns']['municipio']->id, DashboardRelationshipAggregation::Sum->value)
+            ->call('saveManualRelationships')
+            ->assertHasErrors(['manualRelationships']);
+    }
+
+    private function createDashboardWithRelationshipColumns(): array
+    {
+        $sector = Sector::factory()->create(['name' => 'SUENG']);
+        $user = User::factory()->create(['sector_id' => $sector->id]);
+        $dashboard = Dashboard::factory()->create([
+            'sector_id' => $sector->id,
+            'user_id' => $user->id,
+            'status' => DashboardStatus::Ready,
+        ]);
+
+        $columns = [
+            'municipio' => DashboardColumn::query()->create([
+                'dashboard_id' => $dashboard->id,
+                'original_name' => 'MUNICIPIO',
+                'normalized_name' => 'municipio',
+                'friendly_name' => 'Município',
+                'type' => DashboardColumnType::ShortText,
+                'is_filterable' => true,
+                'is_chartable' => true,
+                'position' => 1,
+            ]),
+            'status' => DashboardColumn::query()->create([
+                'dashboard_id' => $dashboard->id,
+                'original_name' => 'STATUS',
+                'normalized_name' => 'status',
+                'friendly_name' => 'Status',
+                'type' => DashboardColumnType::Category,
+                'is_filterable' => true,
+                'is_chartable' => true,
+                'position' => 2,
+            ]),
+            'convenio' => DashboardColumn::query()->create([
+                'dashboard_id' => $dashboard->id,
+                'original_name' => 'Nº CONVÊNIO',
+                'normalized_name' => 'numero_convenio',
+                'friendly_name' => 'Nº Convênio',
+                'type' => DashboardColumnType::Identifier,
+                'is_filterable' => true,
+                'is_chartable' => false,
+                'position' => 3,
+            ]),
+            'valor_pago' => DashboardColumn::query()->create([
+                'dashboard_id' => $dashboard->id,
+                'original_name' => 'VALOR PAGO',
+                'normalized_name' => 'valor_pago',
+                'friendly_name' => 'Valor Pago',
+                'type' => DashboardColumnType::Money,
+                'is_filterable' => false,
+                'is_chartable' => true,
+                'position' => 4,
+            ]),
+            'execucao' => DashboardColumn::query()->create([
+                'dashboard_id' => $dashboard->id,
+                'original_name' => '% EXECUÇÃO',
+                'normalized_name' => 'execucao',
+                'friendly_name' => '% Execução',
+                'type' => DashboardColumnType::Percentage,
+                'is_filterable' => false,
+                'is_chartable' => true,
+                'position' => 5,
+            ]),
+            'data_pagamento' => DashboardColumn::query()->create([
+                'dashboard_id' => $dashboard->id,
+                'original_name' => 'DATA DE PAGAMENTO',
+                'normalized_name' => 'data_pagamento',
+                'friendly_name' => 'Data de Pagamento',
+                'type' => DashboardColumnType::Date,
+                'is_filterable' => true,
+                'is_chartable' => true,
+                'position' => 6,
+            ]),
+        ];
+
+        return compact('sector', 'user', 'dashboard', 'columns');
     }
 }

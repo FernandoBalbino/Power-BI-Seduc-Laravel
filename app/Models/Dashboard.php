@@ -43,6 +43,22 @@ class Dashboard extends Model
         return $this->hasMany(DashboardRow::class);
     }
 
+    public function relationships(): HasMany
+    {
+        return $this->hasMany(DashboardRelationship::class);
+    }
+
+    public function validRelationships(): HasMany
+    {
+        return $this->relationships()
+            ->with(['baseColumn', 'relatedColumn'])
+            ->whereHas('baseColumn')
+            ->where(function ($query): void {
+                $query->whereNull('related_column_id')
+                    ->orWhereHas('relatedColumn');
+            });
+    }
+
     public function dimensionalColumns(): HasMany
     {
         return $this->columns()
